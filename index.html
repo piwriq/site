@@ -1,0 +1,169 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 粒子交互抽牌游戏 - 2026</title>
+    <!-- 使用 2026 稳定版 MediaPipe 库 -->
+    <script src="cdn.jsdelivr.net" crossorigin="anonymous"></script>
+    <script src="cdn.jsdelivr.net" crossorigin="anonymous"></script>
+    <style>
+        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Segoe UI', system-ui; }
+        #video-container { position: fixed; transform: scaleX(-1); opacity: 0.25; width: 100%; height: 100%; object-fit: cover; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 10; }
+        .hud { position: absolute; top: 20px; left: 20px; z-index: 20; pointer-events: none; }
+        #status { color: #0ff; font-weight: bold; }
+        .loading-mask {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.8); display: flex; justify-content: center;
+            align-items: center; z-index: 100; transition: 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="loader" class="loading-mask"><h1>AI 模型加载中...</h1></div>
+    <video id="video-container" playsinline></video>
+    <canvas id="canvas"></canvas>
+    
+    <div class="hud">
+        <h2>交互粒子系统</h2>
+        <p>状态: <span id="status">初始化摄像头...</span></p>
+        <p>操作: 使用食指触碰卡片</p>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('video-container');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+
+        let particles = [];
+        let card = { x: 0, y: 0, w: 140, h: 200, active: false, hue: 200 };
+        let fingerPos = { x: -100, y: -100 };
+
+        // 1. 初始化画布
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (!card.active) resetCard();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function resetCard() {
+            card.x = Math.random() * (canvas.width - 200) + 100;
+            card.y = Math.random() * (canvas.height - 300) + 100;
+            card.hue = Math.random() * 360;
+            card.active = true;
+        }
+
+        // 2. 粒子类
+        class Particle {
+            constructor(x, y, hue) {
+                this.x = x;
+                this.y = y;
+                this.color = `hsla(${hue}, 80%, 60%, 1)`;
+                this.vx = (Math.random() - 0.5) * 20;
+                this.vy = (Math.random() - 0.5) * 20;
+                this.life = 1.0;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // 重力
+                this.life -= 0.02;
+            }
+        }
+
+        // 3. AI 手势逻辑
+        const hands = new Hands({
+            locateFile: (file) => `cdn.jsdelivr.net{file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.6
+        });
+
+        hands.onResults((results) => {
+            document.getElementById('loader').style.display = 'none';
+            statusEl.innerText = "运行中";
+            
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmark = results.multiHandLandmarks[0][8]; // 食指尖端
+                fingerPos.x = (1 - landmark.x) * canvas.width;
+                fingerPos.y = landmark.y * canvas.height;
+
+                // 碰撞检测
+                if (card.active && 
+                    fingerPos.x > card.x && fingerPos.x < card.x + card.w &&
+                    fingerPos.y > card.y && fingerPos.y < card.y + card.h) {
+                    
+                    // 触发爆炸
+                    for(let i=0; i<50; i++) particles.push(new Particle(fingerPos.x, fingerPos.y, card.hue));
+                    card.active = false;
+                    statusEl.innerText = "成功抽牌！等待刷新...";
+                    setTimeout(resetCard, 2000);
+                }
+            }
+        });
+
+        // 4. 渲染循环
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 画卡片
+            if (card.active) {
+                ctx.save();
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = `hsla(${card.hue}, 80%, 50%, 0.5)`;
+                ctx.fillStyle = `hsla(${card.hue}, 80%, 40%, 0.9)`;
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(card.x, card.y, card.w, card.h, 15);
+                ctx.fill();
+                ctx.stroke();
+                // 卡片装饰线
+                ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                ctx.strokeRect(card.x+10, card.y+10, card.w-20, card.h-20);
+                ctx.restore();
+            }
+
+            // 画指尖准星
+            ctx.strokeStyle = "#0ff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(fingerPos.x, fingerPos.y, 20, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 处理粒子
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // 5. 启动
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 1280, height: 720
+        });
+        camera.start();
+        animate();
+    </script>
+</body>
+</html>
