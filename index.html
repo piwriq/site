@@ -1,169 +1,178 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI 粒子交互抽牌游戏 - 2026</title>
-    <!-- 使用 2026 稳定版 MediaPipe 库 -->
-    <script src="cdn.jsdelivr.net" crossorigin="anonymous"></script>
-    <script src="cdn.jsdelivr.net" crossorigin="anonymous"></script>
-    <style>
-        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Segoe UI', system-ui; }
-        #video-container { position: fixed; transform: scaleX(-1); opacity: 0.25; width: 100%; height: 100%; object-fit: cover; }
-        canvas { position: absolute; top: 0; left: 0; z-index: 10; }
-        .hud { position: absolute; top: 20px; left: 20px; z-index: 20; pointer-events: none; }
-        #status { color: #0ff; font-weight: bold; }
-        .loading-mask {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.8); display: flex; justify-content: center;
-            align-items: center; z-index: 100; transition: 0.5s;
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网站导航</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/v4-shims.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        accent: '#F59E0B',
+                        neutral: '#6B7280',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background: rgba(255, 255, 255, 0.8);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
         }
     </style>
 </head>
-<body>
-    <div id="loader" class="loading-mask"><h1>AI 模型加载中...</h1></div>
-    <video id="video-container" playsinline></video>
-    <canvas id="canvas"></canvas>
-    
-    <div class="hud">
-        <h2>交互粒子系统</h2>
-        <p>状态: <span id="status">初始化摄像头...</span></p>
-        <p>操作: 使用食指触碰卡片</p>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-inter">
+    <!-- 主容器 -->
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        
+        <!-- 头部 -->
+        <header class="text-center mb-12">
+            <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-gray-800 mb-4">
+                <i class="fa fa-compass text-primary mr-3"></i>
+                网站导航
+            </h1>
+            <p class="text-gray-600 text-lg">简洁高效的网站访问入口</p>
+        </header>
+
+        <!-- 网站链接网格 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            
+            <!-- 示例网站卡片 1 -->
+            <a href="https://www.baidu.com" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-search text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">百度搜索</h3>
+                    <p class="text-sm text-gray-500">www.baidu.com</p>
+                </div>
+            </a>
+
+            <!-- 示例网站卡片 2 -->
+            <a href="https://www.zhihu.com" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-comments text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">知乎</h3>
+                    <p class="text-sm text-gray-500">www.zhihu.com</p>
+                </div>
+            </a>
+
+            <!-- 示例网站卡片 3 -->
+            <a href="https://www.bilibili.com" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-play-circle text-pink-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">哔哩哔哩</h3>
+                    <p class="text-sm text-gray-500">www.bilibili.com</p>
+                </div>
+            </a>
+
+            <!-- 示例网站卡片 4 -->
+            <a href="https://www.github.com" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-github text-gray-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">GitHub</h3>
+                    <p class="text-sm text-gray-500">www.github.com</p>
+                </div>
+            </a>
+
+            <!-- 示例网站卡片 5 -->
+            <a href="https://www.taobao.com" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-shopping-cart text-orange-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">淘宝</h3>
+                    <p class="text-sm text-gray-500">www.taobao.com</p>
+                </div>
+            </a>
+
+            <!-- 示例网站卡片 6 -->
+            <a href="https://www.163.com" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-newspaper-o text-red-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">网易</h3>
+                    <p class="text-sm text-gray-500">www.163.com</p>
+                </div>
+            </a>
+
+            <!-- 示例网站卡片 7 -->
+            <a href="https://www.csdn.net" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-code text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">CSDN</h3>
+                    <p class="text-sm text-gray-500">www.csdn.net</p>
+                </div>
+            </a>
+
+            <!-- 示例网站卡片 8 -->
+            <a href="https://www.youku.com" target="_blank" class="card-hover">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-video-camera text-red-600 text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">优酷</h3>
+                    <p class="text-sm text-gray-500">www.youku.com</p>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- 底部说明 -->
+        <footer class="mt-16 text-center text-gray-500 text-sm">
+            <p>© 2025 网站导航 | 简洁高效</p>
+            <p class="mt-2 text-xs text-gray-400">需要添加更多网站？请编辑HTML代码中的网站卡片部分</p>
+        </footer>
+
     </div>
 
+    <!-- 简单的交互脚本 -->
     <script>
-        const videoElement = document.getElementById('video-container');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const statusEl = document.getElementById('status');
-
-        let particles = [];
-        let card = { x: 0, y: 0, w: 140, h: 200, active: false, hue: 200 };
-        let fingerPos = { x: -100, y: -100 };
-
-        // 1. 初始化画布
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            if (!card.active) resetCard();
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        function resetCard() {
-            card.x = Math.random() * (canvas.width - 200) + 100;
-            card.y = Math.random() * (canvas.height - 300) + 100;
-            card.hue = Math.random() * 360;
-            card.active = true;
-        }
-
-        // 2. 粒子类
-        class Particle {
-            constructor(x, y, hue) {
-                this.x = x;
-                this.y = y;
-                this.color = `hsla(${hue}, 80%, 60%, 1)`;
-                this.vx = (Math.random() - 0.5) * 20;
-                this.vy = (Math.random() - 0.5) * 20;
-                this.life = 1.0;
-            }
-            draw() {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vy += 0.2; // 重力
-                this.life -= 0.02;
-            }
-        }
-
-        // 3. AI 手势逻辑
-        const hands = new Hands({
-            locateFile: (file) => `cdn.jsdelivr.net{file}`
-        });
-
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.6
-        });
-
-        hands.onResults((results) => {
-            document.getElementById('loader').style.display = 'none';
-            statusEl.innerText = "运行中";
-            
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmark = results.multiHandLandmarks[0][8]; // 食指尖端
-                fingerPos.x = (1 - landmark.x) * canvas.width;
-                fingerPos.y = landmark.y * canvas.height;
-
-                // 碰撞检测
-                if (card.active && 
-                    fingerPos.x > card.x && fingerPos.x < card.x + card.w &&
-                    fingerPos.y > card.y && fingerPos.y < card.y + card.h) {
+        // 添加平滑滚动效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 页面加载动画
+            const cards = document.querySelectorAll('.card-hover');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'all 0.5s ease';
                     
-                    // 触发爆炸
-                    for(let i=0; i<50; i++) particles.push(new Particle(fingerPos.x, fingerPos.y, card.hue));
-                    card.active = false;
-                    statusEl.innerText = "成功抽牌！等待刷新...";
-                    setTimeout(resetCard, 2000);
-                }
-            }
-        });
-
-        // 4. 渲染循环
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 画卡片
-            if (card.active) {
-                ctx.save();
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = `hsla(${card.hue}, 80%, 50%, 0.5)`;
-                ctx.fillStyle = `hsla(${card.hue}, 80%, 40%, 0.9)`;
-                ctx.strokeStyle = "white";
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.roundRect(card.x, card.y, card.w, card.h, 15);
-                ctx.fill();
-                ctx.stroke();
-                // 卡片装饰线
-                ctx.strokeStyle = "rgba(255,255,255,0.3)";
-                ctx.strokeRect(card.x+10, card.y+10, card.w-20, card.h-20);
-                ctx.restore();
-            }
-
-            // 画指尖准星
-            ctx.strokeStyle = "#0ff";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(fingerPos.x, fingerPos.y, 20, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // 处理粒子
-            particles = particles.filter(p => p.life > 0);
-            particles.forEach(p => {
-                p.update();
-                p.draw();
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
             });
-
-            requestAnimationFrame(animate);
-        }
-
-        // 5. 启动
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 1280, height: 720
         });
-        camera.start();
-        animate();
     </script>
 </body>
 </html>
