@@ -1,4 +1,4 @@
-﻿<html lang="zh-CN"><head>
+<html lang="zh-CN"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>通话截图生成器</title>
@@ -376,7 +376,7 @@
             <div class="settings-panel">
                 <div class="settings-group">
                     <label class="settings-label" for="phoneNumber">电话号码</label>
-                    <input type="text" id="phoneNumber" class="settings-input" value="156 9467 7216" placeholder="请输入电话号码">
+                    <input type="text" id="phoneNumber" class="settings-input" value="158 5987 ****" placeholder="请输入电话号码">
                 </div>
                 
                 <div class="settings-group">
@@ -527,8 +527,8 @@
                         
                         <!-- 通话信息 -->
                         <div class="call-header" style="margin-top: 15%;">
-                            <div id="previewNumber" class="call-number">137 0013 7000</div>
-                            <div id="previewType" class="call-type">云语音通话</div>
+                            <div id="previewNumber" class="call-number">137 0013 ****</div>
+                            <div id="previewType" class="call-type">广东深圳 电信</div>
                         </div>
                         
                         <!-- 通话时长 -->
@@ -706,7 +706,7 @@
         // 生成截图
         function generateScreenshot() {
             // 获取输入值
-            const phoneNumber = phoneNumberInput.value || '156 9467 7216';
+            const phoneNumber = phoneNumberInput.value || '158 5987 ****';
             const location = locationInput.value || '';
             const carrier = carrierInput.value || '';
             const callType = `${location} ${carrier}`.trim() || '未知';
@@ -1282,19 +1282,19 @@
                 const sampleData = [
                     {
                         '联系时间': '2024-01-01 10:00:00',
-                        '联系电话': '13800138000',
+                        '联系电话': '1380013****',
                         '归属地': '北京',
                         '运营商': '中国移动'
                     },
                     {
                         '联系时间': '2024-01-02 14:30:00',
-                        '联系电话': '13900139000',
+                        '联系电话': '1390013****',
                         '归属地': '上海',
                         '运营商': '中国电信'
                     },
                     {
                         '联系时间': '2024-01-03 09:15:00',
-                        '联系电话': '13700137000',
+                        '联系电话': '1370013****',
                         '归属地': '广州',
                         '运营商': '中国联通'
                     }
