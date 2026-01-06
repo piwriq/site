@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>萌宠消消乐 - 无尽模式</title>
+    <style>
+        :root {
+            --bg-color: #fff0f5; /* 浅粉色背景 */
+            --primary-color: #ff9aa2; /* 主色调 */
+            --secondary-color: #b5ead7; /* 辅助色 */
+            --text-color: #6d4c41;
+            --grid-gap: 6px;
+            --tile-size: 11vmin; /* 响应式格子大小 */
+            --board-padding: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #fff0f5 0%, #e6e6fa 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* UI 头部 */
+        header {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: center;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            z-index: 10;
+        }
+
+        .stat-box {
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* 游戏区域 */
+        #game-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 15px;
+            padding: var(--board-padding);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 4px solid #fff;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(7, var(--tile-size));
+            grid-template-rows: repeat(7, var(--tile-size));
+            gap: var(--grid-gap);
+        }
+
+        .tile {
+            width: var(--tile-size);
+            height: var(--tile-size);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .tile img {
+            width: 90%;
+            height: 90%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .tile:active {
+            transform: scale(0.9);
+        }
+
+        .tile.selected {
+            background-color: #ffdac1;
+            border: 3px solid var(--primary-color);
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        .tile.matched {
+            animation: popOut 0.3s forwards;
+        }
+
+        /* 冒泡文字特效 */
+        .bubble-text {
+            position: absolute;
+            color: #ff6f61;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-shadow: 2px 2px 0px #fff, 0 0 5px rgba(255,105,180,0.5);
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+            z-index: 20;
+            white-space: nowrap;
+        }
+
+        /* 弹窗遮罩 */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 80%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border: 5px solid var(--primary-color);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 2rem;
+        }
+
+        p {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        button {
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+            margin: 5px;
+            display: inline-block;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        /* 难度按钮样式 */
+        .btn-easy { background: #a8e6cf; box-shadow: 0 4px 0 #81c784; }
+        .btn-normal { background: #ffd3b6; box-shadow: 0 4px 0 #ffb74d; }
+        .btn-hard { background: #ffaaa5; box-shadow: 0 4px 0 #ff8a80; }
+        
+        .btn-easy:active { box-shadow: none; }
+        .btn-normal:active { box-shadow: none; }
+        .btn-hard:active { box-shadow: none; }
+
+        .control-panel {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .small-btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            background: #b5ead7;
+            box-shadow: 0 4px 0 #81c784;
+        }
+
+        /* 动画定义 */
+        @keyframes popOut {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1); opacity: 0; }
+        }
+
+        /* 适配小屏幕 */
+        @media (max-width: 400px) {
+            :root {
+                --tile-size: 12.5vmin;
+                --grid-gap: 4px;
+            }
+            h1 { font-size: 1.5rem; }
+            button { padding: 10px 20px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="stat-box">
+            <div class="stat-label">当前得分</div>
+            <div class="stat-value" id="score">0</div>
+        </div>
+    </header>
+
+    <div id="game-container">
+        <div id="grid"></div>
+    </div>
+
+    <div class="control-panel">
+        <button class="small-btn" id="bgm-toggle">🎵 音乐: 开</button>
+        <button class="small-btn" onclick="showDifficultyModal()">🚩 选难度</button>
+    </div>
+
+    <!-- 开始/难度选择 弹窗 -->
+    <div id="overlay">
+        <div class="modal">
+            <h1>萌宠消消乐</h1>
+            <p>请选择游戏难度</p>
+            <div>
+                <button class="btn-easy" onclick="startGameWithDifficulty('easy')">简单</button>
+                <button class="btn-normal" onclick="startGameWithDifficulty('medium')">普通</button>
+                <button class="btn-hard" onclick="startGameWithDifficulty('hard')">困难</button>
+            </div>
+            <p style="font-size: 0.8rem; margin-top: 15px;">休闲模式，无时间限制</p>
+        </div>
+    </div>
+
+<script>
+    // --- 游戏配置与素材 ---
+    const GRID_SIZE = 7;
+    
+    // 全部素材
+    const ALL_ASSETS = [
+        'https://z-cdn-media.chatglm.cn/files/9ac845ef-d074-41e9-952e-7009f397e637.png?auth_key=1866813069-488a9b1a49a74cb79dc660aacc298277-0-85e806b155ccf834362402bca53dd287', // 猫抱着
+        'https://z-cdn-media.chatglm.cn/files/e2cb6a19-f3ce-4a40-84f9-400bf7d78426.png?auth_key=1866813069-865bce8ae8fe48d79d171147ce6533d0-0-c73e82383ce140b523fad74f00275a2f', // 米老鼠
+        'https://z-cdn-media.chatglm.cn/files/dfffc7d8-9c35-45b4-bd3e-5fe88851d412.png?auth_key=1866813069-b7b2fdfbf02a4b9eb08c0dd7a3fc8d68-0-4079e84a201f2b630e93a68f88d428b6', // 手表
+        'https://z-cdn-media.chatglm.cn/files/9682c61f-12ec-48ef-a54c-aba362b74fb5.png?auth_key=1866813069-d854e2a3a8794b3286d6e375ddf892a4-0-fdc0d11eca749c3248f4a272b7f608d7', // 药瓶
+        'https://z-cdn-media.chatglm.cn/files/01565ca5-68eb-44cd-8cc4-3c1cd0ab4f31.png?auth_key=1866813069-ff7d2ecedfc34becba1b35f7dc3a6574-0-76b6b05658ec1e10b14045f42e77ae39', // 纸巾
+        'https://z-cdn-media.chatglm.cn/files/46e1a01f-2933-4c88-93c0-c4db9d925d1e.png?auth_key=1866813069-479c0fb8736e4795a450e0883a4eec90-0-c1b3b0a68a8793aff7eb8f523de081cb', // 萝卜
+        'https://z-cdn-media.chatglm.cn/files/b63aea5e-32fb-4ee2-a0f0-372c84a49c71.png?auth_key=1866813069-7107c0c523e7492d8226f388434cdcaa-0-7e85bc40dd7e4dc698abe2724a4f7432'  // 猫
+    ];
+
+    let ASSETS = [...ALL_ASSETS]; // 当前使用的素材集
+
+    // --- 游戏状态 ---
+    let grid = [];
+    let selectedTile = null;
+    let score = 0;
+    let isProcessing = false;
+    let isGameActive = false;
+    let bgmPlaying = true;
+
+    // DOM 元素
+    const gridEl = document.getElementById('grid');
+    const scoreEl = document.getElementById('score');
+    const overlayEl = document.getElementById('overlay');
+    const bgmBtn = document.getElementById('bgm-toggle');
+
+    // --- 音频系统 ---
+    let audioCtx;
+    let nextNoteTime = 0;
+    let noteIndex = 0;
+    let bgmTimerID;
+
+    const melody = [
+        261.63, 329.63, 392.00, 523.25,
+        392.00, 329.63, 261.63, 196.00,
+        293.66, 349.23, 440.00, 523.25,
+        440.00, 349.23, 293.66, 261.63
+    ];
+    
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    function playTone(freq, duration, type = 'sine') {
+        if (!bgmPlaying || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        // 再次增大音量：从 0.2 提升到 0.5 (更响亮)
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function scheduler() {
+        if (!isGameActive || !bgmPlaying) return;
+        while (nextNoteTime < audioCtx.currentTime + 0.1) {
+            playTone(melody[noteIndex % melody.length], 0.4);
+            nextNoteTime += 0.4;
+            noteIndex++;
+        }
+        bgmTimerID = setTimeout(scheduler, 25);
+    }
+
+    function startBGM() {
+        initAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        nextNoteTime = audioCtx.currentTime;
+        noteIndex = 0;
+        scheduler();
+    }
+
+    function stopBGM() {
+        clearTimeout(bgmTimerID);
+    }
+
+    // 语音 "蒸蚌"
+    function speakZhengBang() {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance('蒸蚌');
+        utterance.lang = 'zh-CN';
+        utterance.rate = 1.2; 
+        utterance.pitch = 1.5; 
+        
+        const voices = window.speechSynthesis.getVoices();
+        const femaleVoice = voices.find(v => v.lang.includes('zh') && (v.name.includes('Female') || v.name.includes('女') || v.name.includes('Google')));
+        if (femaleVoice) utterance.voice = femaleVoice;
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- 难度逻辑 ---
+    function shuffleArray(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex != 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [
+                array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    function startGameWithDifficulty(difficulty) {
+        initAudio(); // 确保AudioContext已初始化（用户交互后）
+        
+        if (difficulty === 'easy') {
+            // 简单：随机取4个
+            ASSETS = shuffleArray([...ALL_ASSETS]).slice(0, 4);
+        } else if (difficulty === 'medium') {
+            // 普通：随机取6个
+            ASSETS = shuffleArray([...ALL_ASSETS]).slice(0, 6);
+        } else {
+            // 困难：全部7个
+            ASSETS = [...ALL_ASSETS];
+        }
+        
+        overlayEl.style.display = 'none';
+        initGame();
+    }
+
+    function showDifficultyModal() {
+        isGameActive = false;
+        stopBGM();
+        overlayEl.style.display = 'flex';
+    }
+
+    // --- 游戏逻辑 ---
+
+    function initGame() {
+        gridEl.innerHTML = '';
+        grid = [];
+        score = 0;
+        scoreEl.innerText = score;
+        isProcessing = false;
+        
+        // 生成无初始匹配的网格
+        for (let r = 0; r < GRID_SIZE; r++) {
+            let row = [];
+            for (let c = 0; c < GRID_SIZE; c++) {
+                let type;
+                do {
+                    type = Math.floor(Math.random() * ASSETS.length);
+                } while (
+                    (c >= 2 && row[c-1].type === type && row[c-2].type === type) ||
+                    (r >= 2 && grid[r-1][c].type === type && grid[r-2][c].type === type)
+                );
+                
+                let tile = createTileElement(r, c, type);
+                row.push({ type, el: tile, r, c });
+                gridEl.appendChild(tile);
+            }
+            grid.push(row);
+        }
+        
+        // 绑定事件
+        document.querySelectorAll('.tile').forEach(tile => {
+            tile.addEventListener('click', handleTileClick);
+            tile.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleTileClick(e);
+            }, {passive: false});
+        });
+
+        isGameActive = true;
+        startBGM();
+    }
+
+    function createTileElement(r, c, type) {
+        const div = document.createElement('div');
+        div.className = 'tile';
+        div.dataset.r = r;
+        div.dataset.c = c;
+        const img = document.createElement('img');
+        img.src = ASSETS[type];
+        div.appendChild(img);
+        return div;
+    }
+
+    function handleTileClick(e) {
+        if (!isGameActive || isProcessing) return;
+        
+        const target = e.currentTarget;
+        const r = parseInt(target.dataset.r);
+        const c = parseInt(target.dataset.c);
+
+        if (!selectedTile) {
+            selectedTile = { r, c, el: target };
+            target.classList.add('selected');
+        } else {
+            const prev = selectedTile;
+            selectedTile.el.classList.remove('selected');
+            selectedTile = null;
+
+            if (prev.r === r && prev.c === c) return;
+
+            if (Math.abs(prev.r - r) + Math.abs(prev.c - c) === 1) {
+                swapTiles(prev, { r, c, el: target });
+            } else {
+                selectedTile = { r, c, el: target };
+                target.classList.add('selected');
+            }
+        }
+    }
+
+    async function swapTiles(tile1, tile2) {
+        isProcessing = true;
+        await swapVisuals(tile1.el, tile2.el);
+
+        let tempType = grid[tile1.r][tile1.c].type;
+        grid[tile1.r][tile1.c].type = grid[tile2.r][tile2.c].type;
+        grid[tile2.r][tile2.c].type = tempType;
+
+        updateTileImage(tile1.r, tile1.c);
+        updateTileImage(tile2.r, tile2.c);
+
+        const matches = findMatches();
+        
+        if (matches.length > 0) {
+            await processMatches(matches);
+        } else {
+            await new Promise(r => setTimeout(r, 200)); 
+            await swapVisuals(tile1.el, tile2.el);
+            
+            tempType = grid[tile1.r][tile1.c].type;
+            grid[tile1.r][tile1.c].type = grid[tile2.r][tile2.c].type;
+            grid[tile2.r][tile2.c].type = tempType;
+            
+            updateTileImage(tile1.r, tile1.c);
+            updateTileImage(tile2.r, tile2.c);
+            isProcessing = false;
+        }
+    }
+
+    function swapVisuals(el1, el2) {
+        return new Promise(resolve => {
+            el1.style.transform = 'scale(0.8)';
+            el2.style.transform = 'scale(0.8)';
+            
+            setTimeout(() => {
+                el1.style.transform = '';
+                el2.style.transform = '';
+                resolve();
+            }, 200);
+        });
+    }
+
+    function updateTileImage(r, c) {
+        const tileData = grid[r][c];
+        const img = tileData.el.querySelector('img');
+        img.src = ASSETS[tileData.type];
+    }
+
+    function findMatches() {
+        let matches = new Set();
+
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE - 2; c++) {
+                let type = grid[r][c].type;
+                if (grid[r][c+1].type === type && grid[r][c+2].type === type) {
+                    matches.add(grid[r][c]);
+                    matches.add(grid[r][c+1]);
+                    matches.add(grid[r][c+2]);
+                }
+            }
+        }
+
+        for (let c = 0; c < GRID_SIZE; c++) {
+            for (let r = 0; r < GRID_SIZE - 2; r++) {
+                let type = grid[r][c].type;
+                if (grid[r+1][c].type === type && grid[r+2][c].type === type) {
+                    matches.add(grid[r][c]);
+                    matches.add(grid[r+1][c]);
+                    matches.add(grid[r+2][c]);
+                }
+            }
+        }
+        return Array.from(matches);
+    }
+
+    async function processMatches(matches) {
+        score += matches.length * 10;
+        scoreEl.innerText = score;
+
+        let centerX = 0, centerY = 0;
+        matches.forEach(m => {
+            m.el.classList.add('matched');
+            centerX += m.el.offsetLeft;
+            centerY += m.el.offsetTop;
+        });
+        centerX /= matches.length;
+        centerY /= matches.length;
+
+        speakZhengBang();
+        showBubbleText(centerX, centerY);
+
+        await new Promise(r => setTimeout(r, 300));
+
+        matches.forEach(m => {
+            m.el.classList.remove('matched');
+            m.type = -1;
+        });
+
+        for (let c = 0; c < GRID_SIZE; c++) {
+            let emptyCount = 0;
+            for (let r = GRID_SIZE - 1; r >= 0; r--) {
+                if (grid[r][c].type === -1) {
+                    emptyCount++;
+                } else if (emptyCount > 0) {
+                    const targetR = r + emptyCount;
+                    grid[targetR][c].type = grid[r][c].type;
+                    grid[r][c].type = -1;
+                    updateTileImage(targetR, c);
+                    grid[targetR][c].el.style.transform = `translateY(-${emptyCount * 20}px)`;
+                    setTimeout(() => grid[targetR][c].el.style.transform = '', 200);
+                }
+            }
+            
+            for (let r = 0; r < GRID_SIZE; r++) {
+                if (grid[r][c].type === -1) {
+                    grid[r][c].type = Math.floor(Math.random() * ASSETS.length);
+                    updateTileImage(r, c);
+                    grid[r][c].el.style.transform = 'translateY(-50px)';
+                    setTimeout(() => grid[r][c].el.style.transform = '', 200);
+                }
+            }
+        }
+
+        await new Promise(r => setTimeout(r, 250));
+
+        const newMatches = findMatches();
+        if (newMatches.length > 0) {
+            await processMatches(newMatches);
+        } else {
+            isProcessing = false;
+        }
+    }
+
+    function showBubbleText(x, y) {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble-text';
+        bubble.innerText = '蒸蚌';
+        const containerRect = document.getElementById('game-container').getBoundingClientRect();
+        bubble.style.left = (x + 20) + 'px'; 
+        bubble.style.top = (y - 20) + 'px';
+        
+        document.getElementById('game-container').appendChild(bubble);
+        
+        setTimeout(() => {
+            bubble.remove();
+        }, 1000);
+    }
+
+    // --- 控制面板事件 ---
+    bgmBtn.addEventListener('click', () => {
+        bgmPlaying = !bgmPlaying;
+        bgmBtn.innerText = bgmPlaying ? '🎵 音乐: 开' : '🎵 音乐: 关';
+        if (bgmPlaying && isGameActive) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            nextNoteTime = audioCtx.currentTime;
+            scheduler();
+        } else {
+            stopBGM();
+        }
+    });
+
+</script>
+</body>
+</html>
