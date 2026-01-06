@@ -1,0 +1,1339 @@
+﻿<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通话截图生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'call-bg': '#000000',
+                        'call-btn': '#ff3b30',
+                        'call-btn-hover': '#d70015',
+                        'icon-bg': 'rgba(255, 255, 255, 0.15)',
+                        'icon-active': 'rgba(255, 255, 255, 0.25)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .gap-1 {
+                gap: 0.35rem;
+            }
+            #previewtimer{
+                top: -8px;
+                position: relative;
+            }
+            .call-shadow {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .btn-shadow {
+                box-shadow: 0 4px 14px 0 rgba(231, 76, 60, 0.4);
+            }
+            .icon-shadow {
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            .button-content{
+                top: -10px;
+                position: relative;
+            }
+            .progress-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background-color: rgba(255, 255, 255, 0.6);
+                display: inline-block;
+                margin: 0 2px;
+                animation: pulse 1.5s infinite ease-in-out;
+            }
+            .progress-dot.active {
+                background-color: white;
+                animation: none;
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 0.8; }
+            }
+            .call-status-bar {
+                height: 20px;
+                background-color: #000000;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 12px;
+                font-size: 12px;
+                color: white;
+            }
+            .call-header {
+                padding: 30px 0 20px;
+                text-align: center;
+            }
+            .call-avatar {
+                width: 90px;
+                height: 90px;
+                border-radius: 50%;
+                object-fit: cover;
+                margin: 0 auto 16px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            .call-number {
+                font-size: 28px;
+                font-weight: 400;
+                margin-bottom: 6px;
+                letter-spacing: 0.5px;
+            }
+            .call-type {
+                font-size: 14px;
+                opacity: 0.7;
+            }
+            .call-timer {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 25px 0 35px;
+                padding: 10px 0;
+            }
+            .call-timer-icon {
+                width: 16px;
+                height: 20px;
+                background-color: white;
+                border-radius: 2px 2px 4px 4px;
+                margin-right: 8px;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #333;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            .call-timer-icon::before {
+                content: '1';
+                top: -6px;
+                position: relative;
+            }
+            .call-timer-icon::after {
+                content: '';
+                position: absolute;
+                top: -2px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 10px;
+                height: 4px;
+                background-color: white;
+                border-radius: 2px 2px 0 0;
+            }
+            .call-timer-text {
+                font-size: 14px;
+            }
+            .call-buttons {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 50px 25px;
+                padding: 0 40px;
+                margin-bottom: 35px;
+                margin-top: 20px;
+            }
+            .call-button {
+                width: 55px;
+                height: 55px;
+                border-radius: 50%;
+                background-color: rgba(255, 255, 255, 0.15);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                position: relative;
+                backdrop-filter: blur(10px);
+            }
+            .call-button:hover {
+                background-color: rgba(255, 255, 255, 0.15);
+                transform: scale(1.05);
+            }
+            .call-button.active {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+            .call-button.end {
+                background-color: #ff3b30;
+                margin: 0 auto;
+                box-shadow: none;
+            }
+            .call-button.end:hover {
+                background-color: #c0392b;
+                transform: scale(1.05);
+            }
+            .call-button-icon {
+                font-size: 24px;
+                color: white;
+                opacity: 0.95;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                line-height: 55px;
+                text-align: center;
+                position: relative;
+                margin: 0;
+                padding: 0;
+            }
+            .call-button {
+                width: 55px;
+                height: 55px;
+                border-radius: 50%;
+                background-color: rgba(255, 255, 255, 0.15);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                position: relative;
+                backdrop-filter: blur(10px);
+            }
+            .call-button.end {
+                background-color: #ff3b30;
+                margin: 0 auto;
+                box-shadow: none;
+            }
+            .call-button-label {
+                position: absolute;
+                bottom: -22px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 12px;
+                opacity: 0.7;
+                white-space: nowrap;
+            }
+            .settings-panel {
+                background-color: white;
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .settings-group {
+                margin-bottom: 20px;
+            }
+            .settings-label {
+                display: block;
+                font-size: 14px;
+                font-weight: 500;
+                margin-bottom: 8px;
+                color: #333;
+            }
+            .settings-input {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.2s ease;
+            }
+            .settings-input:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+            .settings-select {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                font-size: 14px;
+                background-color: white;
+                cursor: pointer;
+            }
+            .settings-avatar-preview {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 2px solid #e5e7eb;
+                margin-right: 12px;
+            }
+            .avatar-options {
+                display: flex;
+                gap: 10px;
+                margin-top: 10px;
+                flex-wrap: wrap;
+            }
+            .avatar-option {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                object-fit: cover;
+                cursor: pointer;
+                border: 2px solid transparent;
+                transition: all 0.2s ease;
+            }
+            .avatar-option:hover {
+                transform: scale(1.05);
+            }
+            .avatar-option.selected {
+                border-color: #3b82f6;
+            }
+            .generate-btn {
+                width: 100%;
+                padding: 12px;
+                background-color: #3b82f6;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+            .generate-btn:hover {
+                background-color: #2563eb;
+            }
+            .download-btn {
+                width: 100%;
+                padding: 12px;
+                background-color: #10b981;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+                margin-top: 10px;
+            }
+            .download-btn:hover {
+                background-color: #059669;
+            }
+            .preview-container {
+                background: linear-gradient(to top, #564f47, #000000);
+                overflow: hidden;
+                max-width: 375px;
+                margin: 0 auto;
+                box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.3), 0 10px 20px -8px rgba(0, 0, 0, 0.2);
+                position: relative;
+                height: 812px;
+            }
+            .preview-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 20px;
+                background-color: #000000;
+                z-index: 10;
+            }
+            .preview-container::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 130px;
+                height: 25px;
+                background-color: #000000;
+                z-index: 20;
+            }
+            .preview-content {
+                padding-top: 20px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+            @media (max-width: 768px) {
+                .container {
+                    padding: 10px;
+                }
+                .grid-cols-1 md:grid-cols-2 {
+                    grid-template-columns: 1fr;
+                }
+                .settings-panel {
+                    margin-bottom: 20px;
+                }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">通话截图生成器</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 设置面板 -->
+            <div class="settings-panel">
+                <div class="settings-group">
+                    <label class="settings-label" for="phoneNumber">电话号码</label>
+                    <input type="text" id="phoneNumber" class="settings-input" value="156 9467 7216" placeholder="请输入电话号码">
+                </div>
+                
+                <div class="settings-group">
+                    <label class="settings-label">归属地和运营商</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" id="location" class="settings-input" value="上海" placeholder="归属地">
+                        <input type="text" id="carrier" class="settings-input" value="移动" placeholder="运营商">
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <label class="settings-label">通话时长</label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <input type="number" id="hours" class="settings-input" value="0" placeholder="时" min="0" max="99">
+                        <input type="number" id="minutes" class="settings-input" value="0" placeholder="分" min="0" max="59">
+                        <input type="number" id="seconds" class="settings-input" value="3" placeholder="秒" min="0" max="59">
+                    </div>
+                </div>
+                
+
+                
+                <div class="settings-group">
+                    <label class="settings-label">激活按钮</label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- 第一行：录音、保持、添加通话 -->
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnRecord" class="mr-2">
+                            <span>录音</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnHold" class="mr-2">
+                            <span>保持</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnAddCall" class="mr-2">
+                            <span>添加通话</span>
+                        </label>
+                        
+                        <!-- 第二行：静音、视频通话、便签 -->
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnMute" class="mr-2">
+                            <span>静音</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnVideo" class="mr-2">
+                            <span>视频</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnNote" class="mr-2">
+                            <span>便签</span>
+                        </label>
+                        
+                        <!-- 第三行：免提、键盘 -->
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnSpeaker" class="mr-2">
+                            <span>免提</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="btnKeypad" class="mr-2">
+                            <span>键盘</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button id="generateBtn" class="generate-btn">
+                    <i class="fa fa-refresh mr-2"></i>生成截图
+                </button>
+                
+                <button id="downloadBtn" class="download-btn" style="display: none;">
+                    <i class="fa fa-download mr-2"></i>下载截图
+                </button>
+
+                <hr class="my-6 border-gray-200">
+
+                <!-- 批量生成区域 -->
+                <div class="batch-generation">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-800">批量生成</h3>
+                    
+                    <div class="settings-group">
+                        <label class="settings-label">上传Excel文件</label>
+                        <div class="flex items-center gap-2">
+                            <input type="file" id="excelFile" class="settings-input" accept=".xlsx, .xls">
+                            <button id="parseExcelBtn" class="generate-btn">
+                                <i class="fa fa-upload mr-2"></i>解析文件
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">支持 .xlsx, .xls 格式，请确保文件包含：联系时间、联系电话、归属地、运营商列</p>
+                        <div class="mt-2">
+                            <button id="downloadTemplateBtn" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                                <i class="fa fa-download mr-1"></i>下载Excel模板
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="excelInfo" class="settings-group" style="display: none;">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="text-sm text-blue-800"><i class="fa fa-info-circle mr-1"></i> 已解析 <span id="recordCount">0</span> 条通话记录</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-group" style="display: none;" id="batchSettings">
+                        <label class="settings-label">批量生成设置</label>
+                        <div class="bg-green-50 p-3 rounded-lg">
+                            <p class="text-sm text-green-800"><i class="fa fa-info-circle mr-1"></i> 将使用Excel文件中的归属地和运营商信息</p>
+                        </div>
+                    </div>
+
+                    <button id="batchGenerateBtn" class="generate-btn" style="display: none;">
+                        <i class="fa fa-bolt mr-2"></i>批量生成并下载
+                    </button>
+
+                    <div id="batchProgress" class="settings-group" style="display: none;">
+                        <label class="settings-label">处理进度</label>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="text-xs text-gray-500 mt-1">准备中...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 预览区域 -->
+            <div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="preview-content text-white">
+                        <!-- 状态栏 -->
+                        <div class="call-status-bar">
+                           
+              <div class="flex items-center justify-between w-full">
+                <span id="statusBarTime">14:50</span>
+                <div class="flex items-center gap-1">
+                  <i class="fa fa-clock-o"></i>
+                  <i class="fa fa-wifi"></i>
+                  <div class="flex items-center">
+                    <i class="fa fa-signal"></i>
+                    <span style="font-size: 7px; position: absolute; margin-left: -3px; margin-top: -5px;">5G</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fa fa-signal"></i>
+                    <span style="font-size: 7px; position: absolute; margin-left: -3px; margin-top: -5px;">5G</span>
+                  </div>
+                  <i class="fa fa-battery-three-quarters"></i>
+                  <span id="phone-battery">89%</span>
+                </div>
+              </div>
+            
+                        </div>
+                        
+                        <!-- 通话信息 -->
+                        <div class="call-header" style="margin-top: 15%;">
+                            <div id="previewNumber" class="call-number">137 0013 7000</div>
+                            <div id="previewType" class="call-type">云语音通话</div>
+                        </div>
+                        
+                        <!-- 通话时长 -->
+                        <div class="call-timer px-6 justify-start mt-8" style="margin-top: 5% !important;">
+                            <div class="call-timer-icon"></div>
+                            <div id="previewTimer" class="call-timer-text">00:03</div>
+                        </div>
+                        
+
+                        
+                        <!-- 功能按钮 -->
+                        <div class="call-buttons" style="margin-top: 25%;">
+                            <!-- 第一行：录音、保持、添加通话 -->
+                            <div class="call-button" id="btnPreviewRecord">
+                                <div class="button-content">
+                                    <i class="fa fa-circle"></i>
+                                </div>
+                                <span class="call-button-label">录音</span>
+                            </div>
+                            <div class="call-button" id="btnPreviewHold">
+                                <div class="button-content">
+                                    <i class="fa fa-pause"></i>
+                                </div>
+                                <span class="call-button-label">保持</span>
+                            </div>
+                            <div class="call-button" id="btnPreviewAddCall">
+                                <div class="button-content">
+                                    <i class="fa fa-plus"></i>
+                                </div>
+                                <span class="call-button-label">添加通话</span>
+                            </div>
+                            
+                            <!-- 第二行：静音、视频通话、便签 -->
+                            <div class="call-button" id="btnPreviewMute">
+                                <div class="button-content">
+                                    <i class="fa fa-microphone-slash"></i>
+                                </div>
+                                <span class="call-button-label">静音</span>
+                            </div>
+                            <div class="call-button" id="btnPreviewVideo">
+                                <div class="button-content">
+                                    <i class="fa fa-video-camera"></i>
+                                </div>
+                                <span class="call-button-label">视频</span>
+                            </div>
+                            <div class="call-button" id="btnPreviewNote">
+                                <div class="button-content">
+                                    <i class="fa fa-sticky-note"></i>
+                                </div>
+                                <span class="call-button-label">便签</span>
+                            </div>
+                            
+                            <!-- 第三行：免提、挂断、键盘 -->
+                            <div class="call-button" id="btnPreviewSpeaker">
+                                <div class="button-content">
+                                    <i class="fa fa-volume-up"></i>
+                                </div>
+                            </div>
+                            <div class="call-button end" id="btnPreviewEnd">
+                                <div class="button-content">
+                                    <i class="fa fa-phone fa-rotate-135"></i>
+                                </div>
+                            </div>
+                            <div class="call-button" id="btnPreviewKeypad">
+                                <div class="button-content">
+                                    <i class="fa fa-keyboard-o"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let isTimerRunning = false;
+        let timerInterval;
+        let currentSeconds = 3;
+        let currentMinutes = 0;
+        let currentHours = 0;
+        
+        // DOM 元素
+        const phoneNumberInput = document.getElementById('phoneNumber');
+        const locationInput = document.getElementById('location');
+        const carrierInput = document.getElementById('carrier');
+        const hoursInput = document.getElementById('hours');
+        const minutesInput = document.getElementById('minutes');
+        const secondsInput = document.getElementById('seconds');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        const previewNumber = document.getElementById('previewNumber');
+        const previewType = document.getElementById('previewType');
+        const previewTimer = document.getElementById('previewTimer');
+        const statusBarTime = document.getElementById('statusBarTime');
+        
+        const btnMute = document.getElementById('btnMute');
+        const btnSpeaker = document.getElementById('btnSpeaker');
+        const btnAddCall = document.getElementById('btnAddCall');
+        const btnKeypad = document.getElementById('btnKeypad');
+        const btnVideo = document.getElementById('btnVideo');
+        const btnHold = document.getElementById('btnHold');
+        const btnRecord = document.getElementById('btnRecord');
+        const btnNote = document.getElementById('btnNote');
+        
+        const btnPreviewMute = document.getElementById('btnPreviewMute');
+        const btnPreviewHold = document.getElementById('btnPreviewHold');
+        const btnPreviewAddCall = document.getElementById('btnPreviewAddCall');
+        const btnPreviewKeypad = document.getElementById('btnPreviewKeypad');
+        const btnPreviewVideo = document.getElementById('btnPreviewVideo');
+        const btnPreviewSpeaker = document.getElementById('btnPreviewSpeaker');
+        const btnPreviewRecord = document.getElementById('btnPreviewRecord');
+        const btnPreviewNote = document.getElementById('btnPreviewNote');
+        const btnPreviewEnd = document.getElementById('btnPreviewEnd');
+        
+        // 初始化
+        function init() {
+    
+            
+            // 生成按钮点击事件
+            generateBtn.addEventListener('click', generateScreenshot);
+            
+            // 下载按钮点击事件
+            downloadBtn.addEventListener('click', downloadScreenshot);
+            
+            // 结束通话按钮点击事件（模拟）
+            btnPreviewEnd.addEventListener('click', function() {
+                alert('通话已结束！');
+                stopTimer();
+            });
+            
+            // 录音按钮点击事件（模拟）
+            btnPreviewRecord.addEventListener('click', function() {
+                this.classList.toggle('active');
+                if (this.classList.contains('active')) {
+                    alert('录音已开始！');
+                    // 这里可以添加录音动画效果
+                } else {
+                    alert('录音已结束！');
+                }
+            });
+            
+            // 便签按钮点击事件（模拟）
+            btnPreviewNote.addEventListener('click', function() {
+                this.classList.toggle('active');
+                if (this.classList.contains('active')) {
+                    const note = prompt('请输入便签内容：');
+                    if (note) {
+                        alert('便签已保存：' + note);
+                    }
+                }
+            });
+            
+            // 功能按钮点击事件（模拟）
+            const previewButtons = [
+                btnPreviewMute, btnPreviewHold, btnPreviewAddCall,
+                btnPreviewKeypad, btnPreviewVideo, btnPreviewSpeaker,
+                btnPreviewRecord, btnPreviewNote
+            ];
+            
+            previewButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            });
+            
+            // 启动计时器
+            startTimer();
+        }
+        
+        // 生成截图
+        function generateScreenshot() {
+            // 获取输入值
+            const phoneNumber = phoneNumberInput.value || '156 9467 7216';
+            const location = locationInput.value || '';
+            const carrier = carrierInput.value || '';
+            const callType = `${location} ${carrier}`.trim() || '未知';
+            const hours = parseInt(hoursInput.value) || 0;
+            const minutes = parseInt(minutesInput.value) || 0;
+            const seconds = parseInt(secondsInput.value) || 0;
+            
+            // 更新预览
+            previewNumber.textContent = phoneNumber;
+            previewType.textContent = callType;            
+            // 更新时长
+            currentHours = hours;
+            currentMinutes = minutes;
+            currentSeconds = seconds;
+            updateTimerDisplay();
+            
+            // 更新按钮状态
+            updateButtonStates();
+            
+            // 重新启动计时器
+            restartTimer();
+            
+            // 显示下载按钮
+            downloadBtn.style.display = 'block';
+            
+            // 滚动到预览区域
+            document.querySelector('.preview-container').scrollIntoView({
+                behavior: 'smooth'
+            });
+            
+            alert('截图已生成！');
+        }
+        
+        // 更新按钮状态
+        function updateButtonStates() {
+            const buttons = [
+                { input: btnMute, preview: btnPreviewMute },
+                { input: btnSpeaker, preview: btnPreviewSpeaker },
+                { input: btnAddCall, preview: btnPreviewAddCall },
+                { input: btnKeypad, preview: btnPreviewKeypad },
+                { input: btnVideo, preview: btnPreviewVideo },
+                { input: btnHold, preview: btnPreviewHold },
+                { input: btnRecord, preview: btnPreviewRecord },
+                { input: btnNote, preview: btnPreviewNote }
+            ];
+            
+            buttons.forEach(btn => {
+                if (btn.input.checked) {
+                    btn.preview.classList.add('active');
+                } else {
+                    btn.preview.classList.remove('active');
+                }
+            });
+        }
+        
+        // 启动计时器
+        function startTimer() {
+            if (!isTimerRunning) {
+                isTimerRunning = true;
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+        }
+        
+        // 停止计时器
+        function stopTimer() {
+            if (isTimerRunning) {
+                isTimerRunning = false;
+                clearInterval(timerInterval);
+            }
+        }
+        
+        // 重新启动计时器
+        function restartTimer() {
+            stopTimer();
+            startTimer();
+        }
+        
+        // 更新计时器
+        function updateTimer() {
+            currentSeconds++;
+            
+            if (currentSeconds >= 60) {
+                currentSeconds = 0;
+                currentMinutes++;
+                
+                if (currentMinutes >= 60) {
+                    currentMinutes = 0;
+                    currentHours++;
+                    
+                    if (currentHours >= 100) {
+                        currentHours = 0;
+                    }
+                }
+            }
+            
+            updateTimerDisplay();
+        }
+        
+        // 更新计时器显示
+        function updateTimerDisplay() {
+            const hoursStr = currentHours.toString().padStart(2, '0');
+            const minutesStr = currentMinutes.toString().padStart(2, '0');
+            const secondsStr = currentSeconds.toString().padStart(2, '0');
+            
+            if (currentHours > 0) {
+                previewTimer.textContent = `${hoursStr}:${minutesStr}:${secondsStr}`;
+            } else {
+                previewTimer.textContent = `${minutesStr}:${secondsStr}`;
+            }
+        }
+        
+        // 下载截图
+        function downloadScreenshot() {
+            // 随机生成电量和通话时长
+            updateBatteryStatus();
+            
+            // 设置随机时长（5-30秒）
+            currentHours = 0;
+            currentMinutes = 0;
+            currentSeconds = Math.floor(Math.random() * 26) + 5; // 5-30秒
+            updateTimerDisplay();
+
+            // 使用 html2canvas 库来截取预览区域
+            html2canvas(document.getElementById('previewContainer'), {
+                backgroundColor: '#000000',
+                scale: 2,
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '通话截图.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            }).catch(error => {
+                console.error('生成截图时出错:', error);
+                alert('生成截图时出错，请重试');
+            });
+        }
+        
+        // 批量生成相关变量
+        let callRecords = [];
+        let currentBatchIndex = 0;
+        let zip = null;
+
+        // DOM 元素 - 批量生成
+        const excelFileInput = document.getElementById('excelFile');
+        const parseExcelBtn = document.getElementById('parseExcelBtn');
+        const excelInfo = document.getElementById('excelInfo');
+        const recordCount = document.getElementById('recordCount');
+        const batchSettings = document.getElementById('batchSettings');
+
+        const batchGenerateBtn = document.getElementById('batchGenerateBtn');
+        const batchProgress = document.getElementById('batchProgress');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        // 解析Excel文件
+        function parseExcelFile() {
+            const file = excelFileInput.files[0];
+            if (!file) {
+                alert('请选择一个Excel文件');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // 将Excel数据转换为JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    // 验证数据格式
+                    if (jsonData.length === 0) {
+                        alert('Excel文件中没有数据');
+                        return;
+                    }
+
+                    // 提取所需列数据
+                    callRecords = jsonData.map(row => {
+                        return {
+                            time: row['联系时间'] || row['时间'] || '',
+                            phone: row['联系电话'] || row['电话'] || row['手机号'] || '',
+                            location: row['归属地'] || row['地区'] || '',
+                            carrier: row['运营商'] || row['公司'] || ''
+                        };
+                    }).filter(record => record.phone); // 过滤掉没有电话号码的记录
+
+                    if (callRecords.length === 0) {
+                        alert('未找到有效的通话记录，请检查Excel文件格式');
+                        return;
+                    }
+
+                    // 显示解析结果
+                    recordCount.textContent = callRecords.length;
+                    excelInfo.style.display = 'block';
+                    batchSettings.style.display = 'block';
+                    batchGenerateBtn.style.display = 'block';
+
+                    alert(`成功解析 ${callRecords.length} 条通话记录`);
+
+                } catch (error) {
+                    console.error('解析Excel文件时出错:', error);
+                    alert('解析Excel文件时出错，请检查文件格式');
+                }
+            };
+            reader.onerror = function() {
+                alert('读取文件时出错');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 批量生成并下载
+        async function batchGenerateAndDownload() {
+            if (callRecords.length === 0) {
+                alert('没有可处理的通话记录');
+                return;
+            }
+
+            try {
+                // 显示进度条
+                batchProgress.style.display = 'block';
+                batchGenerateBtn.disabled = true;
+                updateProgress(0, callRecords.length);
+
+                // 创建ZIP文件
+                zip = new JSZip();
+
+                // 批量处理记录
+                for (let i = 0; i < callRecords.length; i++) {
+                    await processSingleRecord(callRecords[i], i);
+                }
+
+                // 生成ZIP文件并下载
+                progressText.textContent = '正在打包文件...';
+                const content = await zip.generateAsync({ type: 'blob' });
+                
+                progressText.textContent = '正在下载...';
+                saveAs(content, `通话截图_批量_${new Date().getTime()}.zip`);
+
+                alert(`成功生成并下载 ${callRecords.length} 张通话截图`);
+                
+                // 重置进度条
+                resetProgress();
+
+            } catch (error) {
+                console.error('批量生成时出错:', error);
+                alert('批量生成时出错: ' + error.message);
+                resetProgress();
+            }
+        }
+
+        // 处理单条记录
+        function processSingleRecord(record, index) {
+            return new Promise((resolve) => {
+                try {
+                    // 设置通话信息
+                    const phoneNumber = formatPhoneNumber(record.phone);
+                    const location = record.location || '';
+                    const carrier = record.carrier || '';
+                    const callType = `${location} ${carrier}`.trim() || '未知';
+                    
+                    // 更新状态栏时间
+                    if (record.time) {
+                        const timeStr = formatTimeForStatusBar(record.time);
+                        statusBarTime.textContent = timeStr;
+                    } else {
+                        statusBarTime.textContent = '14:50'; // 默认时间
+                    }
+                    
+                    // 更新预览
+                    previewNumber.textContent = phoneNumber;
+                    previewType.textContent = callType;
+                    
+                    // 设置随机时长（5-30秒）
+                    currentHours = 0;
+                    currentMinutes = 0;
+                    currentSeconds = Math.floor(Math.random() * 26) + 5; // 5-30秒
+                    updateTimerDisplay();
+
+                    // 随机生成电量并更新图标
+                    updateBatteryStatus();
+
+                    // 重置按钮状态
+                    resetButtonStates();
+
+                    // 延迟更长时间，确保DOM完全更新和样式应用
+                    setTimeout(() => {
+                        try {
+                            // 使用html2canvas生成实际的截图
+                            html2canvas(document.getElementById('previewContainer'), {
+                                backgroundColor: '#000000',
+                                scale: 2,
+                                logging: false
+                            }).then(canvas => {
+                                try {
+                                    // 仅使用电话号码命名文件
+                                    const fileName = `${phoneNumber.replace(/\s/g, '')}.png`;
+                                    
+                                    // 将canvas转换为blob并添加到zip文件
+                                    canvas.toBlob((blob) => {
+                                        zip.file(fileName, blob);
+                                        
+                                        // 更新进度
+                                        updateProgress(index + 1, callRecords.length);
+                                        
+                                        resolve();
+                                    }, 'image/png');
+                                } catch (error) {
+                                    console.error('添加文件到ZIP时出错:', error);
+                                    handleRecordError(phoneNumber, index, error);
+                                    resolve();
+                                }
+                            }).catch(error => {
+                                console.error('html2canvas生成截图时出错:', error);
+                                handleRecordError(phoneNumber, index, error);
+                                resolve();
+                            });
+                        } catch (error) {
+                            console.error('调用html2canvas时出错:', error);
+                            handleRecordError(phoneNumber, index, error);
+                            resolve();
+                        }
+                    }, 800); // 增加延迟以确保DOM完全更新和样式应用
+                } catch (error) {
+                    console.error('处理记录时出错:', error);
+                    handleRecordError('未知', index, error);
+                    resolve();
+                }
+            });
+        }
+
+        // 处理记录错误
+        function handleRecordError(phoneNumber, index, error) {
+            const fileName = `通话截图_${phoneNumber.replace(/\s/g, '')}_${index + 1}_error.txt`;
+            zip.file(fileName, `生成截图时出错: ${error.message}\n${error.stack || ''}`);
+            updateProgress(index + 1, callRecords.length);
+        }
+
+        // 格式化电话号码
+        function formatPhoneNumber(phone) {
+            // 检查参数是否为字符串类型
+            if (typeof phone !== 'string') {
+                // 如果不是字符串，尝试转换为字符串
+                phone = String(phone || '');
+            }
+            
+            // 移除非数字字符
+            const cleaned = phone.replace(/\D/g, '');
+            
+            // 格式化为 xxx xxxx xxxx
+            if (cleaned.length === 11) {
+                return cleaned.replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3');
+            }
+            
+            return phone;
+        }
+
+        // 格式化时间为状态栏显示格式 (HH:MM)
+        function formatTimeForStatusBar(timeStr) {
+            console.log('=== 开始智能时间解析 ===');
+            console.log('原始输入:', JSON.stringify(timeStr), '类型:', typeof timeStr);
+            
+            // 解析结果变量
+            let result = null;
+            
+            // 方法1: 尝试解析为Excel时间序列号
+            if (result === null) {
+                const numTime = parseFloat(timeStr);
+                if (!isNaN(numTime) && numTime > 0 && numTime < 100000) {
+                    console.log('方法1 - 尝试解析为Excel时间序列号:', numTime);
+                    try {
+                        // Excel时间序列号转换：天数+小数部分的时间
+                        const date = new Date(Date.UTC(1899, 11, 30, 0, 0, 0, numTime * 86400000));
+                        if (!isNaN(date.getTime())) {
+                            const hours = date.getUTCHours().toString().padStart(2, '0');
+                            const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                            result = `${hours}:${minutes}`;
+                            console.log('方法1 - 解析成功:', result);
+                        } else {
+                            console.log('方法1 - 解析失败: 无效的日期');
+                        }
+                    } catch (error) {
+                        console.log('方法1 - 解析失败:', error.message);
+                    }
+                } else {
+                    console.log('方法1 - 跳过: 不是有效的Excel时间序列号');
+                }
+            }
+            
+            // 转换为字符串以便后续处理
+            let timeString = timeStr;
+            if (typeof timeString !== 'string') {
+                timeString = String(timeString || '');
+                console.log('转换为字符串:', JSON.stringify(timeString));
+            }
+            
+            // 方法2: 检查空字符串
+            if (result === null) {
+                if (!timeString || timeString.trim() === '') {
+                    console.log('方法2 - 检测到空字符串');
+                    result = '14:50'; // 默认时间
+                    console.log('方法2 - 使用默认时间:', result);
+                }
+            }
+            
+            // 清理字符串
+            if (result === null) {
+                timeString = timeString.replace(/[\uFEFF\u00A0]/g, '').trim();
+                console.log('清理后的字符串:', JSON.stringify(timeString));
+            }
+            
+            // 方法3: 手动解析 "2024/1/1 10:00:00" 格式
+            if (result === null && timeString.includes('/') && timeString.includes(' ') && timeString.includes(':')) {
+                console.log('方法3 - 尝试解析 "日期 时间" 格式');
+                try {
+                    const parts = timeString.split(' ');
+                    if (parts.length >= 2) {
+                        const timePart = parts[1];
+                        const timeParts = timePart.split(':');
+                        if (timeParts.length >= 2) {
+                            const hours = timeParts[0].padStart(2, '0');
+                            const minutes = timeParts[1];
+                            result = `${hours}:${minutes}`;
+                            console.log('方法3 - 解析成功:', result);
+                        }
+                    }
+                } catch (error) {
+                    console.log('方法3 - 解析失败:', error.message);
+                }
+            }
+            
+            // 方法4: 使用正则表达式提取时间
+            if (result === null) {
+                console.log('方法4 - 尝试使用正则表达式提取时间');
+                const timeRegex = /(\d{1,2}):(\d{2})(?::\d{2})?/;
+                const timeMatch = timeString.match(timeRegex);
+                if (timeMatch) {
+                    const hours = timeMatch[1].padStart(2, '0');
+                    const minutes = timeMatch[2];
+                    result = `${hours}:${minutes}`;
+                    console.log('方法4 - 解析成功:', result);
+                } else {
+                    console.log('方法4 - 解析失败: 未找到时间格式');
+                }
+            }
+            
+            // 方法5: 尝试解析为ISO 8601格式
+            if (result === null && timeString.includes('T')) {
+                console.log('方法5 - 尝试解析ISO 8601格式');
+                try {
+                    const date = new Date(timeString);
+                    if (!isNaN(date.getTime())) {
+                        const hours = date.getHours().toString().padStart(2, '0');
+                        const minutes = date.getMinutes().toString().padStart(2, '0');
+                        result = `${hours}:${minutes}`;
+                        console.log('方法5 - 解析成功:', result);
+                    }
+                } catch (error) {
+                    console.log('方法5 - 解析失败:', error.message);
+                }
+            }
+            
+            // 方法6: 尝试使用Date构造函数解析
+            if (result === null) {
+                console.log('方法6 - 尝试使用Date构造函数解析');
+                try {
+                    const date = new Date(timeString);
+                    if (!isNaN(date.getTime())) {
+                        const hours = date.getHours().toString().padStart(2, '0');
+                        const minutes = date.getMinutes().toString().padStart(2, '0');
+                        result = `${hours}:${minutes}`;
+                        console.log('方法6 - 解析成功:', result);
+                    } else {
+                        console.log('方法6 - 解析失败: Invalid Date');
+                    }
+                } catch (error) {
+                    console.log('方法6 - 解析失败:', error.message);
+                }
+            }
+            
+            // 方法7: 尝试解析纯数字格式 (HHMMSS 或 HHMM)
+            if (result === null) {
+                console.log('方法7 - 尝试解析纯数字格式');
+                const numMatch = timeString.match(/^(\d{2})(\d{2})(\d{2})?$/);
+                if (numMatch) {
+                    const hours = numMatch[1];
+                    const minutes = numMatch[2];
+                    result = `${hours}:${minutes}`;
+                    console.log('方法7 - 解析成功:', result);
+                } else {
+                    console.log('方法7 - 解析失败: 不符合纯数字格式');
+                }
+            }
+            
+            // 如果所有方法都失败，使用默认时间
+            if (result === null) {
+                console.log('所有方法都失败，使用默认时间');
+                result = '14:50';
+            }
+            
+            console.log('=== 时间解析结束，最终结果:', result, '===');
+            return result;
+        }
+
+        // 重置按钮状态
+        function resetButtonStates() {
+            const previewButtons = [
+                btnPreviewMute, btnPreviewHold, btnPreviewAddCall,
+                btnPreviewKeypad, btnPreviewVideo, btnPreviewSpeaker,
+                btnPreviewRecord, btnPreviewNote
+            ];
+            
+            previewButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // 更新进度
+        function updateProgress(current, total) {
+            const percentage = Math.round((current / total) * 100);
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `处理中... ${current}/${total} (${percentage}%)`;
+        }
+
+        // 更新电池状态
+        function updateBatteryStatus() {
+            const randomBattery = Math.floor(Math.random() * 70) + 30; // 30% - 99%
+            const batteryElement = document.getElementById('phone-battery');
+            const batteryIconElement = batteryElement.previousElementSibling; // 获取电池图标元素
+            
+            // 根据电量设置图标
+            let batteryIcon = 'fa-battery-three-quarters'; // 默认图标
+            
+            if (randomBattery >= 90) {
+                batteryIcon = 'fa-battery-full';
+            } else if (randomBattery >= 75) {
+                batteryIcon = 'fa-battery-three-quarters';
+            } else if (randomBattery >= 50) {
+                batteryIcon = 'fa-battery-half';
+            } else if (randomBattery >= 25) {
+                batteryIcon = 'fa-battery-quarter';
+            } else {
+                batteryIcon = 'fa-battery-empty';
+            }
+            
+            // 移除所有电池相关图标类
+            batteryIconElement.classList.remove('fa-battery-full', 'fa-battery-three-quarters', 'fa-battery-half', 'fa-battery-quarter', 'fa-battery-empty');
+            // 添加当前电量对应的图标类
+            batteryIconElement.classList.add(batteryIcon);
+            
+            // 更新电量文本
+            batteryElement.textContent = randomBattery + '%';
+        }
+
+        // 重置进度
+        function resetProgress() {
+            progressBar.style.width = '0%';
+            progressText.textContent = '准备中...';
+            batchProgress.style.display = 'none';
+            batchGenerateBtn.disabled = false;
+        }
+
+        // 下载Excel模板
+        function downloadExcelTemplate() {
+            try {
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                
+                // 创建示例数据
+                const sampleData = [
+                    {
+                        '联系时间': '2024-01-01 10:00:00',
+                        '联系电话': '13800138000',
+                        '归属地': '北京',
+                        '运营商': '中国移动'
+                    },
+                    {
+                        '联系时间': '2024-01-02 14:30:00',
+                        '联系电话': '13900139000',
+                        '归属地': '上海',
+                        '运营商': '中国电信'
+                    },
+                    {
+                        '联系时间': '2024-01-03 09:15:00',
+                        '联系电话': '13700137000',
+                        '归属地': '广州',
+                        '运营商': '中国联通'
+                    }
+                ];
+                
+                // 创建工作表
+                const ws = XLSX.utils.json_to_sheet(sampleData);
+                
+                // 将工作表添加到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, '通话记录');
+                
+                // 生成Excel文件并下载
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { type: 'application/octet-stream' });
+                saveAs(blob, '通话记录模板.xlsx');
+                
+            } catch (error) {
+                console.error('生成模板时出错:', error);
+                alert('生成模板时出错，请重试');
+            }
+        }
+
+        // 批量生成初始化
+        function initBatchGeneration() {
+            // 解析Excel按钮点击事件
+            parseExcelBtn.addEventListener('click', parseExcelFile);
+            
+            // 批量生成按钮点击事件
+            batchGenerateBtn.addEventListener('click', batchGenerateAndDownload);
+            
+            // 下载模板按钮点击事件
+            document.getElementById('downloadTemplateBtn').addEventListener('click', downloadExcelTemplate);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            init();
+            initBatchGeneration();
+        });
+    </script>
+
+</body></html>
