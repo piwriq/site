@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手机号码归属地查询工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        accent: '#F87272',
+                        neutral: '#64748B',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .glass-effect {
+                backdrop-filter: blur(10px);
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            .card-shadow {
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen font-inter">
+    <!-- 导航栏 -->
+    <nav class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fa fa-phone text-primary text-2xl mr-3"></i>
+                    <span class="text-xl font-bold text-gray-800">手机号码归属地查询工具</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-moon-o text-gray-600"></i>
+                    </button>
+                    <button id="helpBtn" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-question-circle text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 介绍卡片 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 transform hover:scale-[1.01] transition-all duration-300">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
+                    <i class="fa fa-info-circle text-primary text-xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">工具介绍</h2>
+            </div>
+            <p class="text-gray-600 mb-4">
+                本工具可以帮助您批量查询手机号码的归属地和运营商信息。支持上传Excel文件，自动处理所有电话号码，并生成包含查询结果的新Excel文件。
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="flex items-center text-gray-500">
+                    <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                    支持批量查询
+                </div>
+                <div class="flex items-center text-gray-500">
+                    <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                    自动缓存结果
+                </div>
+                <div class="flex items-center text-gray-500">
+                    <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                    导出Excel文件
+                </div>
+            </div>
+        </div>
+
+        <!-- 上传区域 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex items-center mb-6">
+                <div class="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mr-4">
+                    <i class="fa fa-upload text-secondary text-xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">上传Excel文件</h2>
+            </div>
+            
+            <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer">
+                <i class="fa fa-file-excel-o text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 mb-4">拖放Excel文件到此处，或点击选择文件</p>
+                <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
+                <button id="selectFileBtn" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    <i class="fa fa-folder-open mr-2"></i>选择文件
+                </button>
+                <p class="text-xs text-gray-500 mt-4">支持 .xlsx 和 .xls 格式</p>
+            </div>
+
+            <!-- 文件信息 -->
+            <div id="fileInfo" class="mt-6 hidden">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fa fa-file-excel-o text-green-500 text-xl mr-3"></i>
+                        <div>
+                            <p id="fileName" class="font-medium text-gray-800"></p>
+                            <p id="fileSize" class="text-sm text-gray-500"></p>
+                        </div>
+                    </div>
+                    <button id="removeFileBtn" class="text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fa fa-times-circle"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 配置选项 -->
+            <div id="configOptions" class="mt-6 hidden">
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">查询配置</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">电话号码列名</label>
+                            <select id="phoneColumn" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                                <option value="联系电话">联系电话</option>
+                                <option value="手机号">手机号</option>
+                                <option value="电话号码">电话号码</option>
+                                <option value="phone">phone</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="useCache" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" checked>
+                            <label for="useCache" class="ml-2 block text-sm text-gray-700">使用缓存避免重复查询</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="showProgress" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" checked>
+                            <label for="showProgress" class="ml-2 block text-sm text-gray-700">显示查询进度</label>
+                        </div>
+                    </div>
+                    
+                    <button id="startQueryBtn" class="mt-6 w-full bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center">
+                        <i class="fa fa-play mr-2"></i>开始查询
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 进度区域 -->
+        <div id="progressArea" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mr-4">
+                    <i class="fa fa-spinner fa-spin text-accent text-xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">查询进度</h2>
+            </div>
+            
+            <div class="mb-6">
+                <div class="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>进度</span>
+                    <span id="progressText">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-primary h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-1">总号码数</p>
+                    <p id="totalPhones" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-1">已完成</p>
+                    <p id="completedPhones" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-1">剩余时间</p>
+                    <p id="remainingTime" class="text-2xl font-bold text-gray-800">--:--</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4 h-40 overflow-y-auto">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">查询日志</h4>
+                <div id="logContainer" class="text-xs text-gray-600 space-y-1"></div>
+            </div>
+            
+            <div class="mt-4 flex justify-between">
+                <button id="pauseBtn" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors">
+                    <i class="fa fa-pause mr-2"></i>暂停
+                </button>
+                <button id="cancelBtn" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                    <i class="fa fa-times mr-2"></i>取消
+                </button>
+            </div>
+        </div>
+
+        <!-- 结果区域 -->
+        <div id="resultArea" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden">
+            <div class="flex items-center mb-6">
+                <div class="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mr-4">
+                    <i class="fa fa-check-circle text-green-500 text-xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">查询结果</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-1">总记录</p>
+                    <p id="totalRecords" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-1">成功查询</p>
+                    <p id="successCount" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-1">查询失败</p>
+                    <p id="failedCount" class="text-2xl font-bold text-red-600">0</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-1">处理时间</p>
+                    <p id="processingTime" class="text-2xl font-bold text-gray-800">0s</p>
+                </div>
+            </div>
+            
+            <!-- 运营商统计图表 -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">运营商分布</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <canvas id="carrierChart" height="200"></canvas>
+                </div>
+            </div>
+            
+            <!-- 归属地统计图表 -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">归属地分布</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <canvas id="locationChart" height="200"></canvas>
+                </div>
+            </div>
+            
+            <!-- 数据表格预览 -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">数据预览</h3>
+                <div class="overflow-x-auto">
+                    <table id="resultTable" class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系电话</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">归属地</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">运营商</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <!-- 数据将通过JavaScript动态填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="flex justify-center space-x-4">
+                <button id="downloadBtn" class="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center">
+                    <i class="fa fa-download mr-2"></i>下载Excel文件
+                </button>
+                <button id="newQueryBtn" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center">
+                    <i class="fa fa-plus mr-2"></i>新的查询
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white/80 backdrop-blur-md py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-600 text-sm">
+            <p>© 2024 手机号码归属地查询工具 | 本工具仅供学习和研究使用</p>
+            <p class="mt-2">数据来源于公开API，仅供参考</p>
+        </div>
+    </footer>
+
+    <!-- 帮助模态框 -->
+    <div id="helpModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">使用帮助</h3>
+                        <button id="closeHelpBtn" class="text-gray-400 hover:text-gray-600">
+                            <i class="fa fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4 text-gray-600">
+                        <div>
+                            <h4 class="font-semibold text-gray-800 mb-2">如何使用本工具？</h4>
+                            <ol class="list-decimal list-inside space-y-2">
+                                <li>点击"选择文件"按钮，上传包含电话号码的Excel文件</li>
+                                <li>选择电话号码所在的列名（默认为"联系电话"）</li>
+                                <li>点击"开始查询"按钮，等待查询完成</li>
+                                <li>查看查询结果并下载包含归属地和运营商信息的Excel文件</li>
+                            </ol>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-800 mb-2">支持的Excel格式</h4>
+                            <p>支持 .xlsx 和 .xls 格式的Excel文件</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-800 mb-2">注意事项</h4>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>请确保电话号码列名正确选择</li>
+                                <li>查询过程中请勿关闭浏览器</li>
+                                <li>大量数据可能需要较长时间处理</li>
+                                <li>网络不稳定可能导致查询失败</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentFile = null;
+        let excelData = null;
+        let queryCache = {};
+        let isQuerying = false;
+        let queryProgress = 0;
+        let startTime = null;
+        let carrierChart = null;
+        let locationChart = null;
+
+        // DOM元素
+        const elements = {
+            uploadArea: document.getElementById('uploadArea'),
+            fileInput: document.getElementById('fileInput'),
+            selectFileBtn: document.getElementById('selectFileBtn'),
+            fileInfo: document.getElementById('fileInfo'),
+            fileName: document.getElementById('fileName'),
+            fileSize: document.getElementById('fileSize'),
+            removeFileBtn: document.getElementById('removeFileBtn'),
+            configOptions: document.getElementById('configOptions'),
+            phoneColumn: document.getElementById('phoneColumn'),
+            useCache: document.getElementById('useCache'),
+            showProgress: document.getElementById('showProgress'),
+            startQueryBtn: document.getElementById('startQueryBtn'),
+            progressArea: document.getElementById('progressArea'),
+            progressBar: document.getElementById('progressBar'),
+            progressText: document.getElementById('progressText'),
+            totalPhones: document.getElementById('totalPhones'),
+            completedPhones: document.getElementById('completedPhones'),
+            remainingTime: document.getElementById('remainingTime'),
+            logContainer: document.getElementById('logContainer'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            resultArea: document.getElementById('resultArea'),
+            totalRecords: document.getElementById('totalRecords'),
+            successCount: document.getElementById('successCount'),
+            failedCount: document.getElementById('failedCount'),
+            processingTime: document.getElementById('processingTime'),
+            resultTable: document.getElementById('resultTable').querySelector('tbody'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            newQueryBtn: document.getElementById('newQueryBtn'),
+            themeToggle: document.getElementById('themeToggle'),
+            helpBtn: document.getElementById('helpBtn'),
+            helpModal: document.getElementById('helpModal'),
+            closeHelpBtn: document.getElementById('closeHelpBtn')
+        };
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 文件上传相关
+            elements.uploadArea.addEventListener('click', () => elements.fileInput.click());
+            elements.selectFileBtn.addEventListener('click', () => elements.fileInput.click());
+            elements.fileInput.addEventListener('change', handleFileSelect);
+            elements.removeFileBtn.addEventListener('click', removeFile);
+            elements.startQueryBtn.addEventListener('click', startQuery);
+            
+            // 查询控制相关
+            elements.pauseBtn.addEventListener('click', togglePause);
+            elements.cancelBtn.addEventListener('click', cancelQuery);
+            
+            // 结果处理相关
+            elements.downloadBtn.addEventListener('click', downloadExcel);
+            elements.newQueryBtn.addEventListener('click', resetTool);
+            
+            // 其他功能
+            elements.themeToggle.addEventListener('click', toggleTheme);
+            elements.helpBtn.addEventListener('click', () => elements.helpModal.classList.remove('hidden'));
+            elements.closeHelpBtn.addEventListener('click', () => elements.helpModal.classList.add('hidden'));
+            
+            // 拖放功能
+            elements.uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                elements.uploadArea.classList.add('border-primary');
+            });
+            
+            elements.uploadArea.addEventListener('dragleave', () => {
+                elements.uploadArea.classList.remove('border-primary');
+            });
+            
+            elements.uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.uploadArea.classList.remove('border-primary');
+                if (e.dataTransfer.files.length > 0) {
+                    handleDroppedFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        // 处理文件选择
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                handleDroppedFile(e.target.files[0]);
+            }
+        }
+
+        // 处理拖放文件
+        function handleDroppedFile(file) {
+            if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+                file.type === 'application/vnd.ms-excel' || 
+                file.name.endsWith('.xlsx') || 
+                file.name.endsWith('.xls')) {
+                
+                currentFile = file;
+                showFileInfo();
+            } else {
+                showNotification('请上传Excel文件（.xlsx 或 .xls 格式）', 'error');
+            }
+        }
+
+        // 显示文件信息
+        function showFileInfo() {
+            if (currentFile) {
+                elements.fileName.textContent = currentFile.name;
+                elements.fileSize.textContent = formatFileSize(currentFile.size);
+                elements.fileInfo.classList.remove('hidden');
+                elements.configOptions.classList.remove('hidden');
+                elements.uploadArea.classList.add('hidden');
+                
+                // 读取Excel文件
+                readExcelFile(currentFile);
+            }
+        }
+
+        // 移除文件
+        function removeFile() {
+            currentFile = null;
+            excelData = null;
+            elements.fileInput.value = '';
+            elements.fileInfo.classList.add('hidden');
+            elements.configOptions.classList.add('hidden');
+            elements.uploadArea.classList.remove('hidden');
+        }
+
+        // 读取Excel文件
+        function readExcelFile(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    excelData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    logMessage(`成功读取Excel文件，包含 ${excelData.length} 条记录`);
+                    
+                    // 提取列名
+                    if (excelData.length > 0) {
+                        const columns = Object.keys(excelData[0]);
+                        populateColumnOptions(columns);
+                    }
+                    
+                } catch (error) {
+                    showNotification('读取Excel文件失败: ' + error.message, 'error');
+                    console.error('Excel读取错误:', error);
+                }
+            };
+            
+            reader.onerror = function() {
+                showNotification('文件读取失败', 'error');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 填充列名选项
+        function populateColumnOptions(columns) {
+            // 清空现有选项
+            elements.phoneColumn.innerHTML = '';
+            
+            // 添加检测到的列名
+            columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column;
+                option.textContent = column;
+                elements.phoneColumn.appendChild(option);
+            });
+            
+            // 添加常用列名作为备选
+            const commonColumns = ['联系电话', '手机号', '电话号码', 'phone'];
+            commonColumns.forEach(column => {
+                if (!columns.includes(column)) {
+                    const option = document.createElement('option');
+                    option.value = column;
+                    option.textContent = column;
+                    elements.phoneColumn.appendChild(option);
+                }
+            });
+        }
+
+        // 开始查询
+        function startQuery() {
+            if (!excelData || !currentFile) {
+                showNotification('请先上传Excel文件', 'warning');
+                return;
+            }
+            
+            const phoneColumn = elements.phoneColumn.value;
+            const useCache = elements.useCache.checked;
+            const showProgress = elements.showProgress.checked;
+            
+            // 检查电话号码列是否存在
+            if (excelData.length > 0 && !Object.keys(excelData[0]).includes(phoneColumn)) {
+                showNotification(`未找到列名 "${phoneColumn}"，请选择正确的电话号码列`, 'error');
+                return;
+            }
+            
+            // 显示进度区域
+            elements.progressArea.classList.remove('hidden');
+            elements.resultArea.classList.add('hidden');
+            
+            // 初始化进度
+            queryProgress = 0;
+            startTime = new Date();
+            
+            // 获取唯一电话号码
+            const phoneNumbers = getUniquePhoneNumbers(excelData, phoneColumn);
+            elements.totalPhones.textContent = phoneNumbers.length;
+            elements.completedPhones.textContent = '0';
+            
+            // 开始批量查询
+            batchQueryPhones(phoneNumbers, phoneColumn, useCache);
+        }
+
+        // 获取唯一电话号码
+        function getUniquePhoneNumbers(data, phoneColumn) {
+            const phones = new Set();
+            
+            data.forEach(row => {
+                if (row[phoneColumn]) {
+                    const cleanPhone = cleanPhoneNumber(row[phoneColumn]);
+                    if (cleanPhone && cleanPhone.length >= 11) {
+                        phones.add(cleanPhone);
+                    }
+                }
+            });
+            
+            return Array.from(phones);
+        }
+
+        // 清理电话号码
+        function cleanPhoneNumber(phone) {
+            return phone.toString().replace(/\D/g, '');
+        }
+
+        // 批量查询电话号码
+        async function batchQueryPhones(phoneNumbers, phoneColumn, useCache) {
+            isQuerying = true;
+            let completed = 0;
+            const total = phoneNumbers.length;
+            
+            // 更新进度
+            updateProgress(completed, total);
+            
+            // 处理每个电话号码
+            for (let i = 0; i < phoneNumbers.length; i++) {
+                if (!isQuerying) break; // 如果查询被取消，停止处理
+                
+                const phone = phoneNumbers[i];
+                let phoneInfo = null;
+                
+                // 检查缓存
+                if (useCache && queryCache[phone]) {
+                    phoneInfo = queryCache[phone];
+                    logMessage(`使用缓存: ${phone} -> ${phoneInfo.location} - ${phoneInfo.carrier}`);
+                } else {
+                    // 查询电话号码信息
+                    logMessage(`正在查询: ${phone}`);
+                    phoneInfo = await queryPhoneInfo(phone);
+                    
+                    // 保存到缓存
+                    if (useCache && phoneInfo) {
+                        queryCache[phone] = phoneInfo;
+                    }
+                    
+                    // 添加延迟，避免请求过于频繁
+                    await delay(1000 + Math.random() * 2000);
+                }
+                
+                // 更新数据
+                updateExcelData(phone, phoneInfo, phoneColumn);
+                
+                // 更新进度
+                completed++;
+                updateProgress(completed, total);
+                
+                // 显示当前查询结果
+                if (phoneInfo) {
+                    logMessage(`查询成功: ${phone} -> ${phoneInfo.location} - ${phoneInfo.carrier}`);
+                } else {
+                    logMessage(`查询失败: ${phone}`);
+                }
+            }
+            
+            // 查询完成
+            if (isQuerying) {
+                isQuerying = false;
+                showQueryResults();
+            }
+        }
+
+        // 查询单个电话号码信息
+        async function queryPhoneInfo(phoneNumber) {
+            try {
+                // 由于浏览器的跨域限制，我们需要使用代理或者公开的API
+                // 这里使用一个公开的手机号码归属地查询API
+                const apiUrl = `https://api.muxiaoguo.cn/api/tel?tel=${phoneNumber}`;
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data) {
+                    return {
+                        location: data.data.province + data.data.city,
+                        carrier: data.data.isp
+                    };
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('查询失败:', error);
+                return null;
+            }
+        }
+
+        // 更新Excel数据
+        function updateExcelData(phone, phoneInfo, phoneColumn) {
+            excelData.forEach(row => {
+                if (row[phoneColumn]) {
+                    const cleanPhone = cleanPhoneNumber(row[phoneColumn]);
+                    if (cleanPhone === phone) {
+                        row['归属地'] = phoneInfo ? phoneInfo.location : '查询失败';
+                        row['运营商'] = phoneInfo ? phoneInfo.carrier : '查询失败';
+                    }
+                }
+            });
+        }
+
+        // 更新进度
+        function updateProgress(completed, total) {
+            if (total === 0) return;
+            
+            const progress = Math.round((completed / total) * 100);
+            elements.progressBar.style.width = progress + '%';
+            elements.progressText.textContent = progress + '%';
+            elements.completedPhones.textContent = completed;
+            
+            // 计算剩余时间
+            if (completed > 0) {
+                const elapsedTime = (new Date() - startTime) / 1000;
+                const estimatedTotalTime = (elapsedTime / completed) * total;
+                const remainingTime = estimatedTotalTime - elapsedTime;
+                elements.remainingTime.textContent = formatTime(remainingTime);
+            }
+        }
+
+        // 显示查询结果
+        function showQueryResults() {
+            elements.progressArea.classList.add('hidden');
+            elements.resultArea.classList.remove('hidden');
+            
+            // 统计结果
+            const stats = calculateStats();
+            elements.totalRecords.textContent = stats.total;
+            elements.successCount.textContent = stats.success;
+            elements.failedCount.textContent = stats.failed;
+            
+            // 计算处理时间
+            const processingTime = Math.round((new Date() - startTime) / 1000);
+            elements.processingTime.textContent = processingTime + 's';
+            
+            // 显示数据预览
+            showDataPreview();
+            
+            // 生成图表
+            generateCharts();
+        }
+
+        // 计算统计信息
+        function calculateStats() {
+            let success = 0;
+            let failed = 0;
+            
+            excelData.forEach(row => {
+                if (row['运营商'] && row['运营商'] !== '查询失败') {
+                    success++;
+                } else {
+                    failed++;
+                }
+            });
+            
+            return {
+                total: excelData.length,
+                success: success,
+                failed: failed
+            };
+        }
+
+        // 显示数据预览
+        function showDataPreview() {
+            const tbody = elements.resultTable;
+            tbody.innerHTML = '';
+            
+            // 显示前10条数据
+            const previewData = excelData.slice(0, 10);
+            
+            previewData.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // 联系时间
+                const timeTd = document.createElement('td');
+                timeTd.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                timeTd.textContent = row['联系时间'] || '';
+                tr.appendChild(timeTd);
+                
+                // 联系电话
+                const phoneTd = document.createElement('td');
+                phoneTd.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900';
+                phoneTd.textContent = row[elements.phoneColumn.value] || '';
+                tr.appendChild(phoneTd);
+                
+                // 归属地
+                const locationTd = document.createElement('td');
+                locationTd.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                locationTd.textContent = row['归属地'] || '';
+                tr.appendChild(locationTd);
+                
+                // 运营商
+                const carrierTd = document.createElement('td');
+                carrierTd.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500';
+                carrierTd.textContent = row['运营商'] || '';
+                tr.appendChild(carrierTd);
+                
+                tbody.appendChild(tr);
+            });
+            
+            // 如果数据超过10条，显示更多提示
+            if (excelData.length > 10) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.className = 'px-6 py-4 text-center text-sm text-gray-500';
+                td.colSpan = 4;
+                td.textContent = `... 共 ${excelData.length} 条记录，仅显示前10条`;
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
+        }
+
+        // 生成图表
+        function generateCharts() {
+            // 运营商统计
+            const carrierStats = {};
+            excelData.forEach(row => {
+                const carrier = row['运营商'] || '未知';
+                if (carrier !== '查询失败') {
+                    carrierStats[carrier] = (carrierStats[carrier] || 0) + 1;
+                }
+            });
+            
+            // 归属地统计（只显示前10个）
+            const locationStats = {};
+            excelData.forEach(row => {
+                const location = row['归属地'] || '未知';
+                if (location !== '查询失败') {
+                    locationStats[location] = (locationStats[location] || 0) + 1;
+                }
+            });
+            
+            // 生成运营商图表
+            if (carrierChart) {
+                carrierChart.destroy();
+            }
+            
+            const carrierCtx = document.getElementById('carrierChart').getContext('2d');
+            carrierChart = new Chart(carrierCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(carrierStats),
+                    datasets: [{
+                        data: Object.values(carrierStats),
+                        backgroundColor: [
+                            '#165DFF', '#36D399', '#F87272', '#FBBF24', '#8B5CF6',
+                            '#EC4899', '#14B8A6', '#6366F1', '#F59E0B', '#EF4444'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: '运营商分布'
+                        }
+                    }
+                }
+            });
+            
+            // 生成归属地图表（只显示前10个）
+            if (locationChart) {
+                locationChart.destroy();
+            }
+            
+            // 获取前10个归属地
+            const topLocations = Object.entries(locationStats)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            const locationCtx = document.getElementById('locationChart').getContext('2d');
+            locationChart = new Chart(locationCtx, {
+                type: 'bar',
+                data: {
+                    labels: topLocations.map(item => item[0]),
+                    datasets: [{
+                        label: '数量',
+                        data: topLocations.map(item => item[1]),
+                        backgroundColor: 'rgba(22, 93, 255, 0.7)',
+                        borderColor: 'rgba(22, 93, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '归属地分布（前10名）'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 下载Excel文件
+        function downloadExcel() {
+            if (!excelData) {
+                showNotification('没有可下载的数据', 'warning');
+                return;
+            }
+            
+            try {
+                // 转换为工作表
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "查询结果");
+                
+                // 生成文件名
+                const originalName = currentFile.name.replace(/\.[^/.]+$/, "");
+                const timestamp = new Date().toISOString().replace(/[-:\.T]/g, "").slice(0, 14);
+                const fileName = `${originalName}_查询结果_${timestamp}.xlsx`;
+                
+                // 下载文件
+                XLSX.writeFile(wb, fileName);
+                
+                showNotification('文件下载成功', 'success');
+            } catch (error) {
+                showNotification('文件下载失败: ' + error.message, 'error');
+                console.error('下载错误:', error);
+            }
+        }
+
+        // 重置工具
+        function resetTool() {
+            removeFile();
+            elements.resultArea.classList.add('hidden');
+            elements.progressArea.classList.add('hidden');
+            elements.logContainer.innerHTML = '';
+        }
+
+        // 切换暂停/继续
+        function togglePause() {
+            if (isQuerying) {
+                isQuerying = false;
+                elements.pauseBtn.innerHTML = '<i class="fa fa-play mr-2"></i>继续';
+                elements.pauseBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                elements.pauseBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            } else {
+                isQuerying = true;
+                elements.pauseBtn.innerHTML = '<i class="fa fa-pause mr-2"></i>暂停';
+                elements.pauseBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                elements.pauseBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+            }
+        }
+
+        // 取消查询
+        function cancelQuery() {
+            isQuerying = false;
+            elements.progressArea.classList.add('hidden');
+            showNotification('查询已取消', 'info');
+        }
+
+        // 切换主题
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark');
+            
+            if (isDark) {
+                body.classList.remove('dark');
+                elements.themeToggle.innerHTML = '<i class="fa fa-moon-o text-gray-600"></i>';
+            } else {
+                body.classList.add('dark');
+                elements.themeToggle.innerHTML = '<i class="fa fa-sun-o text-yellow-500"></i>';
+            }
+        }
+
+        // 工具函数
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // 格式化时间
+        function formatTime(seconds) {
+            if (seconds < 0) return '00:00';
+            
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 延迟函数
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // 记录日志
+        function logMessage(message) {
+            const logElement = document.createElement('div');
+            logElement.className = 'flex items-center';
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'text-gray-400 mr-2';
+            timeSpan.textContent = new Date().toLocaleTimeString();
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            
+            logElement.appendChild(timeSpan);
+            logElement.appendChild(messageSpan);
+            
+            elements.logContainer.appendChild(logElement);
+            elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full`;
+            
+            // 设置样式
+            switch (type) {
+                case 'success':
+                    notification.classList.add('bg-green-500', 'text-white');
+                    notification.innerHTML = `<i class="fa fa-check-circle mr-2"></i>${message}`;
+                    break;
+                case 'error':
+                    notification.classList.add('bg-red-500', 'text-white');
+                    notification.innerHTML = `<i class="fa fa-exclamation-circle mr-2"></i>${message}`;
+                    break;
+                case 'warning':
+                    notification.classList.add('bg-yellow-500', 'text-white');
+                    notification.innerHTML = `<i class="fa fa-exclamation-triangle mr-2"></i>${message}`;
+                    break;
+                default:
+                    notification.classList.add('bg-blue-500', 'text-white');
+                    notification.innerHTML = `<i class="fa fa-info-circle mr-2"></i>${message}`;
+            }
+            
+            // 添加到页面
+            document.body.appendChild(notification);
+            
+            // 显示通知
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // 自动关闭
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            initEventListeners();
+            showNotification('工具已准备就绪', 'success');
+        });
+    </script>
+</body>
+</html>
