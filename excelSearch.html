@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel ZIP文件读取查询系统（GitHub部署版）</title>
+    <script src="https://unpkg.com/@zip.js/zip.js@2.8.6/dist/zip.min.js"></script>
+    <script src="https://unpkg.com/@zurmokeeper/exceljs@4.3.0/dist/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/v4-shims.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        accent: '#FB8C00',
+                        danger: '#F87272',
+                        dark: '#1E293B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .glass-effect {
+                background: rgba(255, 255, 255, 0.25);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.18);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-inter">
+    <!-- 顶部导航 -->
+    <nav class="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fa fa-file-excel-o text-white text-lg"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-gray-900">Excel ZIP文件读取查询系统</h1>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <i class="fa fa-github mr-1"></i>GitHub部署版
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 步骤指示器 -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center max-w-4xl mx-auto">
+                <div class="step-indicator" id="step1">
+                    <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg mb-2">1</div>
+                    <div class="text-sm font-medium text-primary">加载ZIP文件</div>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-4">
+                    <div class="progress-bar h-full bg-primary w-0 transition-all duration-500" id="progress1"></div>
+                </div>
+                <div class="step-indicator" id="step2">
+                    <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg mb-2">2</div>
+                    <div class="text-sm font-medium text-gray-500">输入ZIP密码</div>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-4">
+                    <div class="progress-bar h-full bg-primary w-0 transition-all duration-500" id="progress2"></div>
+                </div>
+                <div class="step-indicator" id="step3">
+                    <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg mb-2">3</div>
+                    <div class="text-sm font-medium text-gray-500">输入Excel密码</div>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-4">
+                    <div class="progress-bar h-full bg-primary w-0 transition-all duration-500" id="progress3"></div>
+                </div>
+                <div class="step-indicator" id="step4">
+                    <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg mb-2">4</div>
+                    <div class="text-sm font-medium text-gray-500">数据查询</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤1: 加载ZIP文件 -->
+        <div class="step-content" id="stepContent1">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+                    <div class="text-center mb-8">
+                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa fa-cloud-download text-primary text-3xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">加载ZIP文件</h2>
+                        <p class="text-gray-600">从GitHub仓库加载a.zip加密压缩包</p>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                    <i class="fa fa-info-circle text-blue-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-medium text-blue-800 mb-1">部署说明</h4>
+                                    <p class="text-sm text-blue-600">
+                                        本系统已部署在GitHub Pages，将自动从仓库根目录加载a.zip文件。
+                                        确保a.zip文件已上传到GitHub仓库根目录。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="button" id="loadZipFile" class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-lg font-medium transition-colors duration-300 text-lg">
+                                <i class="fa fa-download mr-2"></i>加载a.zip文件
+                            </button>
+                        </div>
+
+                        <div id="fileInfo" class="hidden">
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <i class="fa fa-file-archive-o text-primary text-xl"></i>
+                                        <div>
+                                            <p class="font-medium text-gray-900" id="fileName">a.zip</p>
+                                            <p class="text-sm text-gray-500" id="fileSize"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="nextToStep2" class="w-full mt-6 bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-medium transition-colors duration-300">
+                                下一步 <i class="fa fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+
+                        <div id="loadError" class="hidden bg-red-50 border border-red-200 rounded-xl p-6">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                    <i class="fa fa-exclamation-triangle text-red-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-medium text-red-800 mb-1">加载失败</h4>
+                                    <p class="text-sm text-red-600 mb-3" id="loadErrorMessage">
+                                        无法加载a.zip文件，请检查文件是否存在于仓库根目录。
+                                    </p>
+                                    <div class="bg-red-100 rounded-lg p-3 text-xs text-red-700">
+                                        <p>部署步骤：</p>
+                                        <ol class="list-decimal list-inside mt-1 space-y-1">
+                                            <li>将本HTML文件和a.zip文件上传到GitHub仓库</li>
+                                            <li>在仓库设置中启用GitHub Pages</li>
+                                            <li>确保部署源指向包含文件的分支和目录</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="loadingState" class="hidden text-center">
+                            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                            <p class="text-gray-600">正在从GitHub仓库加载a.zip文件...</p>
+                            <p class="text-sm text-gray-500 mt-2">文件大小可能影响加载时间，请耐心等待</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤2: 输入ZIP密码 -->
+        <div class="step-content hidden" id="stepContent2">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+                    <div class="text-center mb-8">
+                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa fa-lock text-secondary text-3xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">输入ZIP文件密码</h2>
+                        <p class="text-gray-600">请输入a.zip压缩包的加密密码</p>
+                    </div>
+
+                    <form id="zipPasswordForm">
+                        <div class="space-y-6">
+                            <div>
+                                <label for="zipPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                                    ZIP文件密码
+                                </label>
+                                <div class="relative">
+                                    <input type="password" id="zipPassword" name="zipPassword" 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors duration-300"
+                                           placeholder="请输入密码" required>
+                                    <button type="button" id="toggleZipPassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        <i class="fa fa-eye text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex space-x-4">
+                                <button type="button" id="backToStep1" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium transition-colors duration-300">
+                                    <i class="fa fa-arrow-left mr-2"></i> 返回
+                                </button>
+                                <button type="submit" class="flex-1 bg-secondary hover:bg-secondary/90 text-white py-3 rounded-lg font-medium transition-colors duration-300">
+                                    验证密码 <i class="fa fa-check ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div id="zipProcessing" class="hidden mt-6 text-center">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <p class="mt-2 text-gray-600">正在验证并解压ZIP文件...</p>
+                    </div>
+
+                    <div id="zipError" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa fa-exclamation-circle text-red-500"></i>
+                            <p class="text-red-600" id="zipErrorMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤3: 输入Excel密码 -->
+        <div class="step-content hidden" id="stepContent3">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+                    <div class="text-center mb-8">
+                        <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa fa-file-excel-o text-accent text-3xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">输入Excel文件密码</h2>
+                        <p class="text-gray-600">请输入a.xlsx文件的加密密码</p>
+                    </div>
+
+                    <form id="excelPasswordForm">
+                        <div class="space-y-6">
+                            <div>
+                                <label for="excelPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Excel文件密码
+                                </label>
+                                <div class="relative">
+                                    <input type="password" id="excelPassword" name="excelPassword" 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors duration-300"
+                                           placeholder="请输入密码" required>
+                                    <button type="button" id="toggleExcelPassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        <i class="fa fa-eye text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex space-x-4">
+                                <button type="button" id="backToStep2" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium transition-colors duration-300">
+                                    <i class="fa fa-arrow-left mr-2"></i> 返回
+                                </button>
+                                <button type="submit" class="flex-1 bg-accent hover:bg-accent/90 text-white py-3 rounded-lg font-medium transition-colors duration-300">
+                                    验证密码 <i class="fa fa-check ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div id="excelProcessing" class="hidden mt-6 text-center">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                        <p class="mt-2 text-gray-600">正在验证并读取Excel文件...</p>
+                    </div>
+
+                    <div id="excelError" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa fa-exclamation-circle text-red-500"></i>
+                            <p class="text-red-600" id="excelErrorMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤4: 数据查询 -->
+        <div class="step-content hidden" id="stepContent4">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- 查询面板 -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-2xl shadow-xl p-6 card-hover sticky top-24">
+                            <div class="text-center mb-6">
+                                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fa fa-search text-purple-600 text-2xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-900">数据查询</h3>
+                                <p class="text-sm text-gray-600 mt-1">查询村委会或村小组信息</p>
+                            </div>
+
+                            <form id="searchForm">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">查询类型</label>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <label class="flex items-center space-x-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors duration-300">
+                                                <input type="radio" name="searchType" value="village" checked class="text-primary focus:ring-primary">
+                                                <span class="text-sm font-medium">村委会</span>
+                                            </label>
+                                            <label class="flex items-center space-x-2 p-3 border border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors duration-300">
+                                                <input type="radio" name="searchType" value="group" class="text-primary focus:ring-primary">
+                                                <span class="text-sm font-medium">村小组</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="searchKeyword" class="block text-sm font-medium text-gray-700 mb-2">
+                                            查询关键字
+                                        </label>
+                                        <div class="relative">
+                                            <input type="text" id="searchKeyword" name="searchKeyword" 
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors duration-300"
+                                                   placeholder="请输入关键字" required>
+                                            <button type="submit" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary hover:text-primary/80">
+                                                <i class="fa fa-search text-xl"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-medium transition-colors duration-300">
+                                        <i class="fa fa-search mr-2"></i> 查询
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                <h4 class="text-sm font-medium text-gray-700 mb-3">数据统计</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">总记录数:</span>
+                                        <span class="font-medium text-gray-900" id="totalRecords">0</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">查询次数:</span>
+                                        <span class="font-medium text-gray-900" id="searchCount">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 结果显示区域 -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-2xl shadow-xl p-6 card-hover">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-xl font-bold text-gray-900">查询结果</h3>
+                                <div class="flex items-center space-x-4">
+                                    <div class="text-sm text-gray-500" id="searchInfo">请输入关键字进行查询</div>
+                                    <button type="button" id="clearResult" class="text-gray-400 hover:text-gray-600 hidden">
+                                        <i class="fa fa-times-circle text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 结果区域 -->
+                            <div id="resultArea" class="min-h-96">
+                                <!-- 初始状态 -->
+                                <div id="emptyState" class="flex flex-col items-center justify-center h-96 text-center">
+                                    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                        <i class="fa fa-database text-gray-400 text-3xl"></i>
+                                    </div>
+                                    <h4 class="text-lg font-medium text-gray-900 mb-2">暂无查询结果</h4>
+                                    <p class="text-gray-600 max-w-md">请在左侧输入查询关键字，系统将为您展示相关的村委会或村小组信息</p>
+                                </div>
+
+                                <!-- 加载状态 -->
+                                <div id="searchLoadingState" class="hidden flex flex-col items-center justify-center h-96">
+                                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                                    <p class="mt-4 text-gray-600">正在查询数据...</p>
+                                </div>
+
+                                <!-- 错误状态 -->
+                                <div id="searchErrorState" class="hidden flex flex-col items-center justify-center h-96 text-center">
+                                    <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                        <i class="fa fa-exclamation-triangle text-red-500 text-3xl"></i>
+                                    </div>
+                                    <h4 class="text-lg font-medium text-red-600 mb-2">查询失败</h4>
+                                    <p class="text-gray-600 max-w-md" id="searchErrorMessage">未找到匹配的记录</p>
+                                </div>
+
+                                <!-- 结果显示 -->
+                                <div id="resultContent" class="hidden">
+                                    <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                                        <div class="flex items-center space-x-3 mb-4">
+                                            <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                                                <i class="fa fa-info-circle text-primary text-xl"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-gray-900" id="resultTitle"></h4>
+                                                <p class="text-sm text-gray-600" id="resultSubtitle"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div id="resultFields"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-white/80 backdrop-blur-md mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center text-gray-600 text-sm">
+                <p>&copy; 2026 Excel ZIP文件读取查询系统 | GitHub部署版</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 全局变量
+        let zipFile = null;
+        let excelFile = null;
+        let excelData = null;
+        let searchCount = 0;
+
+        // DOM元素
+        const stepContents = document.querySelectorAll('.step-content');
+        const progressBars = document.querySelectorAll('.progress-bar');
+        const stepIndicators = document.querySelectorAll('.step-indicator');
+
+        // 步骤1元素
+        const loadZipFile = document.getElementById('loadZipFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const nextToStep2 = document.getElementById('nextToStep2');
+        const loadError = document.getElementById('loadError');
+        const loadErrorMessage = document.getElementById('loadErrorMessage');
+        const loadingState = document.getElementById('loadingState');
+
+        // 步骤2元素
+        const zipPasswordForm = document.getElementById('zipPasswordForm');
+        const zipPassword = document.getElementById('zipPassword');
+        const toggleZipPassword = document.getElementById('toggleZipPassword');
+        const backToStep1 = document.getElementById('backToStep1');
+        const zipProcessing = document.getElementById('zipProcessing');
+        const zipError = document.getElementById('zipError');
+        const zipErrorMessage = document.getElementById('zipErrorMessage');
+
+        // 步骤3元素
+        const excelPasswordForm = document.getElementById('excelPasswordForm');
+        const excelPassword = document.getElementById('excelPassword');
+        const toggleExcelPassword = document.getElementById('toggleExcelPassword');
+        const backToStep2 = document.getElementById('backToStep2');
+        const excelProcessing = document.getElementById('excelProcessing');
+        const excelError = document.getElementById('excelError');
+        const excelErrorMessage = document.getElementById('excelErrorMessage');
+
+        // 步骤4元素
+        const searchForm = document.getElementById('searchForm');
+        const searchKeyword = document.getElementById('searchKeyword');
+        const totalRecords = document.getElementById('totalRecords');
+        const searchCountElement = document.getElementById('searchCount');
+        const resultArea = document.getElementById('resultArea');
+        const emptyState = document.getElementById('emptyState');
+        const searchLoadingState = document.getElementById('searchLoadingState');
+        const searchErrorState = document.getElementById('searchErrorState');
+        const searchErrorMessage = document.getElementById('searchErrorMessage');
+        const resultContent = document.getElementById('resultContent');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultSubtitle = document.getElementById('resultSubtitle');
+        const resultFields = document.getElementById('resultFields');
+        const clearResult = document.getElementById('clearResult');
+        const searchInfo = document.getElementById('searchInfo');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+        });
+
+        // 初始化事件监听器
+        function initializeEventListeners() {
+            // 步骤1事件
+            loadZipFile.addEventListener('click', handleLoadZipFile);
+            nextToStep2.addEventListener('click', goToStep2);
+
+            // 步骤2事件
+            zipPasswordForm.addEventListener('submit', handleZipPasswordSubmit);
+            toggleZipPassword.addEventListener('click', () => togglePasswordVisibility('zipPassword', toggleZipPassword));
+            backToStep1.addEventListener('click', goToStep1);
+
+            // 步骤3事件
+            excelPasswordForm.addEventListener('submit', handleExcelPasswordSubmit);
+            toggleExcelPassword.addEventListener('click', () => togglePasswordVisibility('excelPassword', toggleExcelPassword));
+            backToStep2.addEventListener('click', goToStep2);
+
+            // 步骤4事件
+            searchForm.addEventListener('submit', handleSearchSubmit);
+            clearResult.addEventListener('click', clearSearchResult);
+        }
+
+        // 从GitHub仓库加载ZIP文件
+        async function handleLoadZipFile() {
+            try {
+                showLoadingState();
+                hideLoadError();
+
+                // 获取当前页面的基本URL
+                const baseUrl = window.location.href.split('?')[0].split('#')[0];
+                const zipUrl = baseUrl + (baseUrl.endsWith('/') ? '' : '/') + 'a.zip';
+                
+                console.log('尝试加载ZIP文件:', zipUrl);
+
+                // 加载ZIP文件
+                const response = await fetch(zipUrl, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+                }
+
+                // 获取文件大小
+                const contentLength = response.headers.get('content-length');
+                const fileSizeBytes = contentLength ? parseInt(contentLength) : null;
+
+                // 读取文件内容
+                zipFile = await response.blob();
+                
+                // 更新文件信息
+                fileName.textContent = 'a.zip';
+                fileSize.textContent = fileSizeBytes ? formatFileSize(fileSizeBytes) : '未知大小';
+                fileInfo.classList.remove('hidden');
+
+                hideLoadingState();
+
+            } catch (error) {
+                hideLoadingState();
+                console.error('加载ZIP文件时出错:', error);
+                
+                let errorMsg = '无法加载a.zip文件';
+                if (error.message.includes('404')) {
+                    errorMsg = 'a.zip文件不存在，请检查文件是否已上传到仓库根目录';
+                } else if (error.message.includes('CORS') || error.message.includes('跨域')) {
+                    errorMsg = '跨域访问被阻止，请确保文件与网页在同一个GitHub仓库';
+                } else {
+                    errorMsg = error.message;
+                }
+                
+                showLoadError(errorMsg);
+            }
+        }
+
+        // 切换密码可见性
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa fa-eye-slash text-xl';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa fa-eye text-xl';
+            }
+        }
+
+        // 处理ZIP密码提交 - 使用zip.js库
+        async function handleZipPasswordSubmit(event) {
+            event.preventDefault();
+            const password = zipPassword.value.trim();
+            
+            if (!password) {
+                showError('zipError', 'zipErrorMessage', '请输入ZIP文件密码');
+                return;
+            }
+
+            try {
+                showProcessing('zipProcessing');
+                hideError('zipError');
+
+                // 使用zip.js库读取加密的ZIP文件
+                const reader = new zip.ZipReader(new zip.BlobReader(zipFile), {
+                    password: password
+                });
+
+                try {
+                    // 获取ZIP文件中的所有条目
+                    const entries = await reader.getEntries();
+                    
+                    // 查找a.xlsx文件
+                    let excelEntry = null;
+                    for (const entry of entries) {
+                        if (entry.filename === 'a.xlsx' && !entry.directory) {
+                            excelEntry = entry;
+                            break;
+                        }
+                    }
+
+                    if (!excelEntry) {
+                        throw new Error('ZIP文件中未找到a.xlsx文件');
+                    }
+
+                    // 读取Excel文件内容
+                    const writer = new zip.BlobWriter();
+                    await excelEntry.getData(writer);
+                    excelFile = await writer.getData();
+                    
+                    // 关闭阅读器
+                    await reader.close();
+                    
+                    hideProcessing('zipProcessing');
+                    goToStep3();
+                } catch (error) {
+                    // 关闭阅读器
+                    await reader.close();
+                    throw error;
+                }
+
+            } catch (error) {
+                hideProcessing('zipProcessing');
+                console.error('处理ZIP文件时出错:', error);
+                
+                // 更友好的错误提示
+                let errorMsg = '处理ZIP文件时出错';
+                if (error.message.includes('password') || error.message.includes('decrypt')) {
+                    errorMsg = 'ZIP密码错误或文件损坏';
+                } else if (error.message.includes('unsupported') || error.message.includes('not supported')) {
+                    errorMsg = '不支持的ZIP加密格式，请使用AES加密或ZipCrypto加密';
+                } else {
+                    errorMsg = error.message || errorMsg;
+                }
+                
+                showError('zipError', 'zipErrorMessage', errorMsg);
+            }
+        }
+
+        // 处理Excel密码提交 - 使用@zurmokeeper/exceljs库
+        async function handleExcelPasswordSubmit(event) {
+            event.preventDefault();
+            const password = excelPassword.value.trim();
+            
+            if (!password) {
+                showError('excelError', 'excelErrorMessage', '请输入Excel文件密码');
+                return;
+            }
+
+            try {
+                showProcessing('excelProcessing');
+                hideError('excelError');
+
+                // 使用@zurmokeeper/exceljs库读取加密的Excel文件
+                const workbook = new ExcelJS.Workbook();
+                
+                try {
+                    // 读取加密的Excel文件
+                    await workbook.xlsx.load(excelFile, { password: password });
+                    
+                    // 获取第一个工作表
+                    const worksheet = workbook.worksheets[0];
+                    if (!worksheet) {
+                        throw new Error('Excel文件中没有工作表');
+                    }
+
+                    // 将数据转换为数组格式（兼容SheetJS）
+                    const rows = [];
+                    
+                    // 添加标题行
+                    const headerRow = [];
+                    worksheet.getRow(1).eachCell((cell, colNumber) => {
+                        headerRow.push(cell.value);
+                    });
+                    rows.push(headerRow);
+
+                    // 添加数据行（从第二行开始）
+                    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+                        const row = [];
+                        worksheet.getRow(rowNumber).eachCell((cell, colNumber) => {
+                            row.push(cell.value);
+                        });
+                        rows.push(row);
+                    }
+
+                    excelData = rows;
+                    
+                    if (excelData.length === 0) {
+                        throw new Error('Excel文件中没有数据');
+                    }
+
+                    // 更新统计信息
+                    totalRecords.textContent = excelData.length - 1; // 减去标题行
+                    
+                    hideProcessing('excelProcessing');
+                    goToStep4();
+                    
+                } catch (error) {
+                    console.error('ExcelJS处理错误:', error);
+                    
+                    // 如果exceljs失败，尝试使用SheetJS作为备选方案
+                    try {
+                        const arrayBuffer = await excelFile.arrayBuffer();
+                        const data = new Uint8Array(arrayBuffer);
+                        const workbook = XLSX.read(data, { 
+                            type: 'array',
+                            password: password
+                        });
+
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        if (excelData.length === 0) {
+                            throw new Error('Excel文件中没有数据');
+                        }
+
+                        totalRecords.textContent = excelData.length - 1;
+                        hideProcessing('excelProcessing');
+                        goToStep4();
+                        
+                    } catch (sheetjsError) {
+                        console.error('SheetJS备选方案也失败:', sheetjsError);
+                        throw error;
+                    }
+                }
+
+            } catch (error) {
+                hideProcessing('excelProcessing');
+                console.error('处理Excel文件时出错:', error);
+                
+                let errorMsg = '处理Excel文件时出错';
+                if (error.message.includes('password') || error.message.includes('decrypt')) {
+                    errorMsg = 'Excel密码错误或文件损坏';
+                } else if (error.message.includes('File is password-protected')) {
+                    errorMsg = 'Excel文件受密码保护，请输入正确的密码';
+                } else {
+                    errorMsg = error.message || errorMsg;
+                }
+                
+                showError('excelError', 'excelErrorMessage', errorMsg);
+            }
+        }
+
+        // 处理搜索提交
+        function handleSearchSubmit(event) {
+            event.preventDefault();
+            const keyword = searchKeyword.value.trim();
+            const searchType = document.querySelector('input[name="searchType"]:checked').value;
+            
+            if (!keyword) {
+                showSearchError('请输入查询关键字');
+                return;
+            }
+
+            try {
+                showSearchLoading();
+                searchCount++;
+                searchCountElement.textContent = searchCount;
+
+                // 根据查询类型选择列
+                const columnIndex = searchType === 'village' ? 1 : 2; // B列是索引1，C列是索引2
+                
+                // 搜索数据（从第二行开始，跳过标题行）
+                let foundRow = null;
+                for (let i = 1; i < excelData.length; i++) {
+                    const row = excelData[i];
+                    if (row[columnIndex] && row[columnIndex].toString().includes(keyword)) {
+                        foundRow = row;
+                        break;
+                    }
+                }
+
+                if (foundRow) {
+                    displaySearchResult(foundRow, searchType, keyword);
+                } else {
+                    showSearchError(`未找到包含"${keyword}"的${searchType === 'village' ? '村委会' : '村小组'}信息`);
+                }
+
+            } catch (error) {
+                showSearchError('查询过程中发生错误: ' + error.message);
+            }
+        }
+
+        // 显示搜索结果
+        function displaySearchResult(row, searchType, keyword) {
+            // 隐藏其他状态，显示结果
+            emptyState.classList.add('hidden');
+            searchLoadingState.classList.add('hidden');
+            searchErrorState.classList.add('hidden');
+            resultContent.classList.remove('hidden');
+            clearResult.classList.remove('hidden');
+
+            // 更新搜索信息
+            const searchTypeText = searchType === 'village' ? '村委会' : '村小组';
+            searchInfo.textContent = `搜索 ${searchTypeText}: "${keyword}"`;
+
+            // 获取标题行
+            const headers = excelData[0];
+            
+            // 设置结果标题
+            resultTitle.textContent = `${searchTypeText}信息`;
+            resultSubtitle.textContent = `找到匹配的${searchTypeText}记录`;
+
+            // 清空之前的结果
+            resultFields.innerHTML = '';
+
+            // 显示所有字段
+            row.forEach((value, index) => {
+                if (headers[index] && value) {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'p-4 bg-gray-50 rounded-lg';
+                    fieldDiv.innerHTML = `
+                        <div class="text-sm font-medium text-gray-500 mb-1">${headers[index]}</div>
+                        <div class="text-lg font-semibold text-gray-900">${value}</div>
+                    `;
+                    resultFields.appendChild(fieldDiv);
+                }
+            });
+        }
+
+        // 显示搜索错误
+        function showSearchError(message) {
+            emptyState.classList.add('hidden');
+            searchLoadingState.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            searchErrorState.classList.remove('hidden');
+            searchErrorMessage.textContent = message;
+            clearResult.classList.remove('hidden');
+        }
+
+        // 显示搜索加载状态
+        function showSearchLoading() {
+            emptyState.classList.add('hidden');
+            searchErrorState.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            searchLoadingState.classList.remove('hidden');
+            clearResult.classList.add('hidden');
+        }
+
+        // 清除搜索结果
+        function clearSearchResult() {
+            searchKeyword.value = '';
+            emptyState.classList.remove('hidden');
+            searchLoadingState.classList.add('hidden');
+            searchErrorState.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            clearResult.classList.add('hidden');
+            searchInfo.textContent = '请输入关键字进行查询';
+        }
+
+        // 步骤导航
+        function goToStep1() {
+            showStep(1);
+        }
+
+        function goToStep2() {
+            showStep(2);
+        }
+
+        function goToStep3() {
+            showStep(3);
+        }
+
+        function goToStep4() {
+            showStep(4);
+        }
+
+        // 显示指定步骤
+        function showStep(stepNumber) {
+            // 隐藏所有步骤内容
+            stepContents.forEach(content => content.classList.add('hidden'));
+            
+            // 显示当前步骤内容
+            document.getElementById(`stepContent${stepNumber}`).classList.remove('hidden');
+            
+            // 更新步骤指示器和进度条
+            updateStepIndicators(stepNumber);
+            updateProgressBars(stepNumber);
+        }
+
+        // 更新步骤指示器
+        function updateStepIndicators(currentStep) {
+            stepIndicators.forEach((indicator, index) => {
+                const stepNumber = index + 1;
+                const circle = indicator.querySelector('div:first-child');
+                
+                if (stepNumber < currentStep) {
+                    // 已完成的步骤
+                    circle.className = 'w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg mb-2';
+                    circle.innerHTML = '<i class="fa fa-check"></i>';
+                    indicator.querySelector('div:last-child').className = 'text-sm font-medium text-green-500';
+                } else if (stepNumber === currentStep) {
+                    // 当前步骤
+                    circle.className = 'w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg mb-2';
+                    circle.textContent = stepNumber;
+                    indicator.querySelector('div:last-child').className = 'text-sm font-medium text-primary';
+                } else {
+                    // 未完成的步骤
+                    circle.className = 'w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-bold text-lg mb-2';
+                    circle.textContent = stepNumber;
+                    indicator.querySelector('div:last-child').className = 'text-sm font-medium text-gray-500';
+                }
+            });
+        }
+
+        // 更新进度条
+        function updateProgressBars(currentStep) {
+            progressBars.forEach((bar, index) => {
+                const progressStep = index + 1;
+                if (progressStep < currentStep) {
+                    bar.style.width = '100%';
+                } else if (progressStep === currentStep) {
+                    bar.style.width = '50%';
+                } else {
+                    bar.style.width = '0%';
+                }
+            });
+        }
+
+        // 显示处理状态
+        function showProcessing(elementId) {
+            document.getElementById(elementId).classList.remove('hidden');
+        }
+
+        // 隐藏处理状态
+        function hideProcessing(elementId) {
+            document.getElementById(elementId).classList.add('hidden');
+        }
+
+        // 显示错误
+        function showError(errorContainerId, errorMessageId, message) {
+            const errorContainer = document.getElementById(errorContainerId);
+            const errorMessageElement = document.getElementById(errorMessageId);
+            
+            errorMessageElement.textContent = message;
+            errorContainer.classList.remove('hidden');
+        }
+
+        // 隐藏错误
+        function hideError(errorContainerId) {
+            document.getElementById(errorContainerId).classList.add('hidden');
+        }
+
+        // 显示加载状态
+        function showLoadingState() {
+            loadingState.classList.remove('hidden');
+            loadZipFile.disabled = true;
+            loadZipFile.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        // 隐藏加载状态
+        function hideLoadingState() {
+            loadingState.classList.add('hidden');
+            loadZipFile.disabled = false;
+            loadZipFile.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // 显示加载错误
+        function showLoadError(message) {
+            loadErrorMessage.textContent = message;
+            loadError.classList.remove('hidden');
+        }
+
+        // 隐藏加载错误
+        function hideLoadError() {
+            loadError.classList.add('hidden');
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
