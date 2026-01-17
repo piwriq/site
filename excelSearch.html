@@ -523,9 +523,9 @@
                 showLoadingState();
                 hideLoadError();
 
-                // 获取当前页面的基本URL
-                const baseUrl = window.location.href.split('?')[0].split('#')[0];
-                const zipUrl = baseUrl + (baseUrl.endsWith('/') ? '' : '/') + 'site/a.zip';
+                // 使用域名直接访问site目录下的a.zip文件
+                const domain = window.location.origin;
+                const zipUrl = domain + '/site/a.zip';
                 
                 console.log('尝试加载ZIP文件:', zipUrl);
 
