@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel ZIP文件读取查询系统（GitHub部署版）</title>
     <script src="https://unpkg.com/@zip.js/zip.js@2.8.6/dist/zip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/officecrypto-tool@0.0.19/dist/officecrypto.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
@@ -654,7 +654,7 @@
             }
         }
 
-        // 处理Excel密码提交 - 使用officecrypto-tool库
+        // 处理Excel密码提交 - 使用SheetJS直接解密
         async function handleExcelPasswordSubmit(event) {
             event.preventDefault();
             const password = excelPassword.value.trim();
@@ -668,17 +668,17 @@
                 showProcessing('excelProcessing');
                 hideError('excelError');
 
-                // 使用officecrypto-tool库解密Excel文件
+                // 读取Excel文件内容
                 const arrayBuffer = await excelFile.arrayBuffer();
                 const encryptedData = new Uint8Array(arrayBuffer);
                 
                 try {
-                    // 解密Excel文件
-                    const decryptedData = await officeCrypto.decrypt(encryptedData, password);
-                    
-                    // 使用SheetJS读取解密后的Excel文件
-                    const workbook = XLSX.read(decryptedData, { type: 'array' });
-                    
+                    // 直接使用SheetJS尝试解密Excel文件
+                    const workbook = XLSX.read(encryptedData, { 
+                        type: 'array',
+                        password: password
+                    });
+
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
                     excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -694,31 +694,10 @@
                     goToStep4();
                     
                 } catch (error) {
-                    console.error('officecrypto-tool处理错误:', error);
+                    console.error('SheetJS处理错误:', error);
                     
-                    // 如果officecrypto失败，尝试直接使用SheetJS（不解密）
-                    try {
-                        const workbook = XLSX.read(encryptedData, { 
-                            type: 'array',
-                            password: password
-                        });
-
-                        const sheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[sheetName];
-                        excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                        
-                        if (excelData.length === 0) {
-                            throw new Error('Excel文件中没有数据');
-                        }
-
-                        totalRecords.textContent = excelData.length - 1;
-                        hideProcessing('excelProcessing');
-                        goToStep4();
-                        
-                    } catch (sheetjsError) {
-                        console.error('SheetJS备选方案也失败:', sheetjsError);
-                        throw error;
-                    }
+                    // 如果SheetJS失败，尝试使用另一种方法
+                    throw error;
                 }
 
             } catch (error) {
