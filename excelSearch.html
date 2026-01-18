@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel ZIP文件读取查询系统（GitHub部署版）</title>
     <script src="https://unpkg.com/@zip.js/zip.js@2.8.6/dist/zip.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
@@ -654,7 +654,7 @@
             }
         }
 
-        // 处理Excel密码提交 - 使用SheetJS直接解密
+        // 处理Excel密码提交 - 使用exceljs解密，然后用SheetJS处理
         async function handleExcelPasswordSubmit(event) {
             event.preventDefault();
             const password = excelPassword.value.trim();
@@ -670,18 +670,37 @@
 
                 // 读取Excel文件内容
                 const arrayBuffer = await excelFile.arrayBuffer();
-                const encryptedData = new Uint8Array(arrayBuffer);
                 
                 try {
-                    // 直接使用SheetJS尝试解密Excel文件
-                    const workbook = XLSX.read(encryptedData, { 
-                        type: 'array',
-                        password: password
+                    // 首先尝试使用exceljs解密Excel文件
+                    const workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(arrayBuffer, { password: password });
+                    
+                    // 获取第一个工作表
+                    const worksheet = workbook.worksheets[0];
+                    if (!worksheet) {
+                        throw new Error('Excel文件中没有工作表');
+                    }
+                    
+                    // 将exceljs的工作表转换为SheetJS可以处理的格式
+                    // 方法1：将数据转换为二维数组
+                    excelData = [];
+                    
+                    // 添加标题行
+                    const headerRow = [];
+                    worksheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                        headerRow.push(cell.value ? cell.value.toString() : '');
                     });
-
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    excelData.push(headerRow);
+                    
+                    // 添加数据行
+                    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+                        const row = [];
+                        worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                            row.push(cell.value ? cell.value.toString() : '');
+                        });
+                        excelData.push(row);
+                    }
                     
                     if (excelData.length === 0) {
                         throw new Error('Excel文件中没有数据');
@@ -693,11 +712,32 @@
                     hideProcessing('excelProcessing');
                     goToStep4();
                     
-                } catch (error) {
-                    console.error('SheetJS处理错误:', error);
+                } catch (exceljsError) {
+                    console.error('exceljs处理错误:', exceljsError);
                     
-                    // 如果SheetJS失败，尝试使用另一种方法
-                    throw error;
+                    // 如果exceljs失败，尝试使用SheetJS（备选方案）
+                    try {
+                        const workbook = XLSX.read(arrayBuffer, { 
+                            type: 'array',
+                            password: password
+                        });
+
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        if (excelData.length === 0) {
+                            throw new Error('Excel文件中没有数据');
+                        }
+
+                        totalRecords.textContent = excelData.length - 1;
+                        hideProcessing('excelProcessing');
+                        goToStep4();
+                        
+                    } catch (sheetjsError) {
+                        console.error('SheetJS备选方案也失败:', sheetjsError);
+                        throw new Error('无法解密Excel文件，请检查密码是否正确或文件是否损坏');
+                    }
                 }
 
             } catch (error) {
