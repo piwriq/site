@@ -37,10 +37,114 @@
                 transform: translateY(-5px);
                 box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             }
+            .search-sidebar {
+                position: fixed;
+                top: 0;
+                right: -350px;
+                width: 350px;
+                height: 100vh;
+                background: white;
+                box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+                transition: right 0.3s ease;
+                z-index: 1000;
+            }
+            .search-sidebar.open {
+                right: 0;
+            }
+            .search-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                z-index: 999;
+            }
+            .search-overlay.open {
+                opacity: 1;
+                visibility: visible;
+            }
+            .search-icon-btn {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 60px;
+                height: 60px;
+                background: #4F46E5;
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                z-index: 1001;
+            }
+            .search-icon-btn:hover {
+                transform: scale(1.1);
+                box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
+            }
+            .function-card {
+                transition: all 0.3s ease;
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .function-card.hidden {
+                opacity: 0;
+                transform: translateY(10px);
+                height: 0;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-inter">
+    <!-- 搜索侧边栏 -->
+    <div class="search-sidebar" id="searchSidebar">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-800">功能搜索</h3>
+                <button id="closeSearch" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="relative mb-6">
+                <input type="text" id="functionSearch" 
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors duration-300"
+                       placeholder="输入功能关键词搜索...">
+                <button type="button" id="clearSearchInput" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                    <i class="fa fa-times-circle text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="text-xs text-gray-500 mb-6">
+                <span class="text-primary font-medium">提示：</span> 输入功能关键词（如"通话"、"消消乐"、"查询"等）快速定位功能卡片
+            </div>
+            
+            <div class="border-t pt-4">
+                <h4 class="font-semibold text-gray-700 mb-3">搜索结果</h4>
+                <div id="searchResults" class="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto">
+                    <!-- 搜索结果将在这里动态显示 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索遮罩层 -->
+    <div class="search-overlay" id="searchOverlay"></div>
+
+    <!-- 侧边放大镜按钮 -->
+    <div class="search-icon-btn" id="searchIconBtn">
+        <i class="fa fa-search text-2xl"></i>
+    </div>
+
     <!-- 主容器 -->
     <div class="container mx-auto px-4 py-8 max-w-6xl">
         
@@ -54,10 +158,10 @@
         </header>
 
         <!-- 网站链接网格 -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="functionCardsContainer">
             
             <!-- 示例网站卡片 1 -->
-            <a href="https://piwriq.github.io/site/generalCall2.html" target="_blank" class="card-hover">
+            <a href="https://piwriq.github.io/site/generalCall2.html" target="_blank" class="card-hover function-card" data-title="通话截图生成器" data-keywords="通话,截图,生成器">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-mobile text-blue-600 text-2xl"></i>
@@ -67,7 +171,7 @@
             </a>
 
             <!-- 示例网站卡片 2 -->
-            <a href="https://piwriq.github.io/site/%E5%B0%8F%E7%8C%AB%E6%B6%88%E6%B6%88%E4%B9%90.html" target="_blank" class="card-hover">
+            <a href="https://piwriq.github.io/site/%E5%B0%8F%E7%8C%AB%E6%B6%88%E6%B6%88%E4%B9%90.html" target="_blank" class="card-hover function-card" data-title="小猫消消乐" data-keywords="小猫,消消乐,游戏">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-cat text-blue-600 text-2xl"></i>
@@ -77,7 +181,7 @@
             </a>
 
             <!-- 示例网站卡片 3 -->
-            <a href="https://piwriq.github.io/site/phoneInfoQuery.html" target="_blank" class="card-hover">
+            <a href="https://piwriq.github.io/site/phoneInfoQuery.html" target="_blank" class="card-hover function-card" data-title="归属地批量查询" data-keywords="归属地,批量,查询,手机号">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-search text-gray-600 text-2xl"></i>
@@ -87,7 +191,7 @@
             </a>
 
             <!-- 示例网站卡片 4 -->
-            <a href="https://piwriq.github.io/site/excelSearch.html" target="_blank" class="card-hover">
+            <a href="https://piwriq.github.io/site/excelSearch.html" target="_blank" class="card-hover function-card" data-title="给定excel信息查询" data-keywords="excel,信息,查询,数据">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-search text-gray-600 text-2xl"></i>
@@ -97,7 +201,7 @@
             </a>
 
             <!-- 示例网站卡片 5 -->
-            <a href="https://www.taobao.com" target="_blank" class="card-hover">
+            <a href="https://www.taobao.com" target="_blank" class="card-hover function-card" data-title="淘宝" data-keywords="淘宝,购物,电商">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-shopping-cart text-orange-600 text-2xl"></i>
@@ -107,7 +211,7 @@
             </a>
 
             <!-- 示例网站卡片 6 -->
-            <a href="https://www.163.com" target="_blank" class="card-hover">
+            <a href="https://www.163.com" target="_blank" class="card-hover function-card" data-title="网易" data-keywords="网易,新闻,邮箱">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-newspaper-o text-red-600 text-2xl"></i>
@@ -117,7 +221,7 @@
             </a>
 
             <!-- 示例网站卡片 7 -->
-            <a href="https://www.csdn.net" target="_blank" class="card-hover">
+            <a href="https://www.csdn.net" target="_blank" class="card-hover function-card" data-title="CSDN" data-keywords="CSDN,编程,技术">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-code text-blue-600 text-2xl"></i>
@@ -127,7 +231,7 @@
             </a>
 
             <!-- 示例网站卡片 8 -->
-            <a href="https://www.youku.com" target="_blank" class="card-hover">
+            <a href="https://www.youku.com" target="_blank" class="card-hover function-card" data-title="优酷" data-keywords="优酷,视频,电影">
                 <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fa fa-video-camera text-red-600 text-2xl"></i>
@@ -146,10 +250,30 @@
 
     </div>
 
-    <!-- 简单的交互脚本 -->
+    <!-- 交互脚本 -->
     <script>
-        // 添加平滑滚动效果
+        // DOM元素
+        const searchIconBtn = document.getElementById('searchIconBtn');
+        const searchSidebar = document.getElementById('searchSidebar');
+        const searchOverlay = document.getElementById('searchOverlay');
+        const closeSearch = document.getElementById('closeSearch');
+        const functionSearch = document.getElementById('functionSearch');
+        const clearSearchInput = document.getElementById('clearSearchInput');
+        const functionCards = document.querySelectorAll('.function-card');
+        const searchResults = document.getElementById('searchResults');
+        const functionCardsContainer = document.getElementById('functionCardsContainer');
+
+        // 初始化事件监听器
         document.addEventListener('DOMContentLoaded', function() {
+            // 搜索侧边栏相关事件
+            searchIconBtn.addEventListener('click', toggleSearchSidebar);
+            searchOverlay.addEventListener('click', toggleSearchSidebar);
+            closeSearch.addEventListener('click', toggleSearchSidebar);
+            
+            // 搜索功能相关事件
+            functionSearch.addEventListener('input', handleFunctionSearch);
+            clearSearchInput.addEventListener('click', clearFunctionSearch);
+
             // 页面加载动画
             const cards = document.querySelectorAll('.card-hover');
             cards.forEach((card, index) => {
@@ -165,6 +289,118 @@
                 }, index * 100);
             });
         });
+
+        // 切换搜索侧边栏
+        function toggleSearchSidebar() {
+            searchSidebar.classList.toggle('open');
+            searchOverlay.classList.toggle('open');
+            
+            // 如果打开搜索侧边栏，自动聚焦搜索框
+            if (searchSidebar.classList.contains('open')) {
+                setTimeout(() => {
+                    functionSearch.focus();
+                }, 300);
+            }
+        }
+
+        // 功能卡片搜索处理
+        function handleFunctionSearch() {
+            const searchTerm = functionSearch.value.trim().toLowerCase();
+            
+            // 显示或隐藏清除按钮
+            if (searchTerm) {
+                clearSearchInput.classList.remove('hidden');
+            } else {
+                clearSearchInput.classList.add('hidden');
+            }
+
+            // 过滤匹配的卡片
+            const matchedCards = Array.from(functionCards).filter(card => {
+                const cardTitle = card.dataset.title.toLowerCase();
+                const cardKeywords = card.dataset.keywords.toLowerCase();
+                const cardContent = card.textContent.toLowerCase();
+                
+                return cardTitle.includes(searchTerm) || 
+                       cardKeywords.includes(searchTerm) || 
+                       cardContent.includes(searchTerm);
+            });
+
+            // 更新搜索结果显示
+            updateSearchResults(matchedCards, searchTerm);
+
+            // 在主页面中高亮显示匹配的卡片
+            highlightMatchedCards(matchedCards);
+        }
+
+        // 更新搜索结果显示
+        function updateSearchResults(matchedCards, searchTerm) {
+            searchResults.innerHTML = '';
+            
+            if (searchTerm === '') {
+                searchResults.innerHTML = '<p class="text-gray-500 text-center">请输入关键词搜索功能</p>';
+                return;
+            }
+
+            if (matchedCards.length === 0) {
+                searchResults.innerHTML = '<p class="text-gray-500 text-center">未找到匹配的功能</p>';
+                return;
+            }
+
+            // 创建搜索结果列表
+            matchedCards.forEach(card => {
+                const resultItem = document.createElement('a');
+                resultItem.href = card.href;
+                resultItem.target = '_blank';
+                resultItem.className = 'block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200';
+                
+                const cardTitle = card.dataset.title;
+                const cardIcon = card.querySelector('i').cloneNode(true);
+                
+                resultItem.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            ${cardIcon.outerHTML}
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-800">${cardTitle}</h4>
+                        </div>
+                    </div>
+                `;
+                
+                searchResults.appendChild(resultItem);
+            });
+        }
+
+        // 高亮显示匹配的卡片
+        function highlightMatchedCards(matchedCards) {
+            functionCards.forEach(card => {
+                if (matchedCards.includes(card)) {
+                    card.classList.remove('hidden');
+                    card.style.border = '2px solid #4F46E5';
+                    card.style.transform = 'scale(1.02)';
+                } else {
+                    card.classList.add('hidden');
+                    card.style.border = '1px solid #e5e7eb';
+                    card.style.transform = 'scale(1)';
+                }
+            });
+        }
+
+        // 清除功能卡片搜索
+        function clearFunctionSearch() {
+            functionSearch.value = '';
+            clearSearchInput.classList.add('hidden');
+            
+            // 显示所有功能卡片
+            functionCards.forEach(card => {
+                card.classList.remove('hidden');
+                card.style.border = '1px solid #e5e7eb';
+                card.style.transform = 'scale(1)';
+            });
+            
+            // 清空搜索结果
+            searchResults.innerHTML = '<p class="text-gray-500 text-center">请输入关键词搜索功能</p>';
+        }
     </script>
 </body>
 </html>
