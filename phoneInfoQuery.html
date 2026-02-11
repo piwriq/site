@@ -350,14 +350,6 @@
         let startTime = null;
         let carrierChart = null;
         let locationChart = null;
-        
-        // 备用CORS代理列表（增加容错性）
-        const corsProxies = [
-            "https://corsproxy.io/?",
-            "https://api.allorigins.win/raw?url=",
-            "https://proxy.cors.sh/"
-        ];
-        let currentProxyIndex = 0;
 
         // DOM元素
         const elements = {
@@ -616,9 +608,9 @@
                     phoneInfo = queryCache[phone];
                     logMessage(`使用缓存: ${phone} -> ${phoneInfo.location} - ${phoneInfo.carrier}`);
                 } else {
-                    // 查询电话号码信息（增加重试机制）
+                    // 查询电话号码信息
                     logMessage(`正在查询: ${phone}`);
-                    phoneInfo = await queryPhoneInfoWithRetry(phone, 3); // 最多重试3次
+                    phoneInfo = await queryPhoneInfo(phone);
                     
                     // 保存到缓存
                     if (useCache && phoneInfo) {
@@ -651,62 +643,40 @@
             }
         }
 
-        // 带重试机制的号码查询
-        async function queryPhoneInfoWithRetry(phoneNumber, maxRetries) {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const result = await queryPhoneInfo(phoneNumber);
-                    if (result) {
-                        return result;
-                    }
-                    // 如果失败，切换到下一个代理
-                    currentProxyIndex = (currentProxyIndex + 1) % corsProxies.length;
-                    logMessage(`切换到备用代理 ${currentProxyIndex + 1}/${corsProxies.length}`);
-                } catch (error) {
-                    logMessage(`第 ${i + 1} 次查询失败: ${error.message}`);
-                    currentProxyIndex = (currentProxyIndex + 1) % corsProxies.length;
-                }
-                // 重试前增加延迟
-                await delay(2000 * (i + 1));
-            }
-            return null;
-        }
-
-        // 查询单个电话号码信息 - 修复跨域问题
+        // 查询单个电话号码信息 - 使用原Python代码中的URL和请求设计
         async function queryPhoneInfo(phoneNumber) {
             try {
                 // 原Python代码中的基础URL
                 const baseUrl = "http://tool.cqmuniu.com";
-                const targetUrl = `${baseUrl}/${phoneNumber}`;
+                const url = `${baseUrl}/${phoneNumber}`;
                 
-                // 获取当前使用的代理
-                const currentProxy = corsProxies[currentProxyIndex];
-                let proxiedUrl = '';
-                
-                // 根据不同代理的格式拼接URL
-                if (currentProxy.includes('corsproxy.io') || currentProxy.includes('allorigins.win')) {
-                    proxiedUrl = currentProxy + encodeURIComponent(targetUrl);
-                } else {
-                    proxiedUrl = currentProxy + targetUrl;
-                }
-                
-                logMessage(`使用代理 ${currentProxyIndex + 1}: ${proxiedUrl}`);
-                
-                // 优化的请求头（减少被过滤的风险）
+                // 原Python代码中的请求头
                 const headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                    "Referer": "http://tool.cqmuniu.com/"
+                    "Accept-Encoding": "gzip, deflate",
+                    "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
+                    "Connection": "keep-alive",
+                    "Host": "tool.cqmuniu.com",
+                    "Priority": "u=0, i",
+                    "Referer": "http://tool.cqmuniu.com/13800138000",
+                    "Sec-GPC": "1",
+                    "Upgrade-Insecure-Requests": "1",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0"
                 };
                 
-                // 发送GET请求（简化配置，避免OPTIONS预检请求）
+                // 由于浏览器的跨域限制，我们需要使用CORS代理
+                // 这里使用公开的CORS代理服务
+                const proxyUrl = "https://corsproxy.io/?";
+                const proxiedUrl = proxyUrl + encodeURIComponent(url);
+                
+                logMessage(`请求URL: ${url}`);
+                
+                // 发送GET请求
                 const response = await fetch(proxiedUrl, {
                     method: 'GET',
                     headers: headers,
                     mode: 'cors',
-                    cache: 'no-cache',
-                    redirect: 'follow'
+                    cache: 'no-cache'
                 });
                 
                 if (!response.ok) {
@@ -734,53 +704,43 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlContent, 'text/html');
                 
-                // 查找结果容器（增加备选选择器，提高容错性）
-                let resultContainer = doc.querySelector('div#result.result-box');
-                if (!resultContainer) {
-                    resultContainer = doc.querySelector('.result-box');
-                }
+                // 查找结果容器
+                const resultContainer = doc.querySelector('div#result.result-box');
                 if (!resultContainer) {
                     logMessage(`未找到结果容器，号码: ${phoneNumber}`);
                     return null;
                 }
                 
-                // 提取运营商信息（增加备选选择器）
+                // 提取运营商信息
                 let carrier = "未知";
-                let phoneTypeSpan = resultContainer.querySelector('span.phone-type');
-                if (!phoneTypeSpan) {
-                    phoneTypeSpan = resultContainer.querySelector('.phone-type');
-                }
+                const phoneTypeSpan = resultContainer.querySelector('span.phone-type');
                 if (phoneTypeSpan) {
                     carrier = phoneTypeSpan.textContent.trim();
                 }
                 
                 // 提取归属地信息
                 let location = "未知";
-                const resultItems = resultContainer.querySelectorAll('div.result-item, .result-item');
+                const resultItems = resultContainer.querySelectorAll('div.result-item');
                 
                 for (const item of resultItems) {
-                    const itemLabel = item.querySelector('span.item-label, .item-label');
-                    const itemValue = item.querySelector('span.item-value, .item-value');
+                    const itemLabel = item.querySelector('span.item-label');
+                    const itemValue = item.querySelector('span.item-value');
                     
                     if (itemLabel && itemValue) {
                         const labelText = itemLabel.textContent.trim();
                         const valueText = itemValue.textContent.trim();
                         
-                        // 查找归属地信息（支持多种文本）
-                        if (labelText.includes('归属地') || labelText.includes('所属地区')) {
+                        // 查找归属地信息
+                        if (labelText.includes('归属地')) {
                             location = valueText;
                             break;
                         }
                     }
                 }
                 
-                // 清理数据：去除空格和特殊字符
-                carrier = carrier.replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
-                location = location.replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
-                
-                // 保底处理：如果解析结果为空，标记为未知
-                if (!carrier || carrier === '') carrier = '未知';
-                if (!location || location === '') location = '未知';
+                // 清理数据：去除空格
+                carrier = carrier.replace(/\s+/g, '');
+                location = location.replace(/\s+/g, '');
                 
                 logMessage(`解析结果 - 号码 ${phoneNumber}: ${location} - ${carrier}`);
                 
