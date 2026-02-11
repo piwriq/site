@@ -666,8 +666,8 @@
                 
                 // 由于浏览器的跨域限制，我们需要使用CORS代理
                 // 这里使用公开的CORS代理服务
-                const proxyUrl = "https://corsproxy.io/?";
-                const proxiedUrl = url;
+                const proxyUrl = "https://cors-anywhere.herokuapp.com/";
+                const proxiedUrl = proxyUrl + url;
                 
                 logMessage(`请求URL: ${url}`);
                 
