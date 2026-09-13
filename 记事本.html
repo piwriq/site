@@ -17,6 +17,7 @@
 }
 /* ===== 浅色 ===== */
 [data-theme="light"]{
+  color-scheme:light;
   --bg:#f5f5f7;
   --bg-2:#ffffff;
   --surface:rgba(0,0,0,.025);
@@ -82,6 +83,7 @@
 .theme-opt .check svg{width:15px;height:15px}
 /* ===== 暗色 ===== */
 [data-theme="dark"]{
+  color-scheme:dark;
   --bg:#0a0a0f;
   --bg-2:#16161e;
   --surface:rgba(255,255,255,.045);
@@ -118,6 +120,7 @@
 }
 /* ===== 护眼绿 ===== */
 [data-theme="green"]{
+  color-scheme:light;
   --bg:#c7edcc;
   --bg-2:#e8f5e9;
   --surface:rgba(0,0,0,.03);
@@ -179,7 +182,7 @@ body::after{
 
 /* ===== header ===== */
 .topbar{
-  position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:160;display:flex;align-items:center;gap:16px;
   padding:16px 32px;backdrop-filter:blur(20px);background:var(--topbar-bg);
   border-bottom:1px solid var(--border);
 }
@@ -352,14 +355,15 @@ body::after{
 
 /* ===== edit form modal ===== */
 .form-group{margin-bottom:18px}
-.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text-dim);margin-bottom:8px;letter-spacing:.2px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:8px;letter-spacing:.2px}
 .form-group input[type=text],.form-group textarea{
   width:100%;padding:12px 16px;background:var(--surface);border:1px solid var(--border);
   border-radius:11px;font-size:14px;outline:none;transition:border .15s,background .15s;
+  color:var(--text);
 }
+.form-group input::placeholder,.form-group textarea::placeholder{color:var(--text-muted)}
 .form-group input:focus,.form-group textarea:focus{border-color:var(--accent);background:var(--surface-2)}
 .form-group textarea{min-height:220px;resize:vertical;line-height:1.7}
-.form-group input[list]{text-transform:none}
 .form-hint{font-size:12px;color:var(--text-muted);margin-top:6px}
 
 /* ===== confirm dialog ===== */
@@ -716,9 +720,8 @@ body::after{
         '</div>' +
         '<div class="form-group">' +
           '<label>分类</label>' +
-          '<input list="catList" id="fCat" placeholder="选择或输入" value="'+esc(n.category||"general")+'">' +
-          '<datalist id="catList"><option value="general"><option value="work"><option value="study"><option value="life"><option value="tutorial"><option value="documentation"></datalist>' +
-          '<div class="form-hint">可从下拉选择，也可自行输入</div>' +
+          '<input type="text" id="fCat" placeholder="输入分类…" value="'+esc(n.category||"general")+'">' +
+          '<div class="form-hint">手动填写分类</div>' +
         '</div>' +
         '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">' +
           '<button class="btn btn-ghost" id="fCancel">取消</button>' +
