@@ -182,7 +182,7 @@ body::after{
 
 /* ===== header ===== */
 .topbar{
-  position:sticky;top:0;z-index:160;display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:90;display:flex;align-items:center;gap:16px;
   padding:16px 32px;backdrop-filter:blur(20px);background:var(--topbar-bg);
   border-bottom:1px solid var(--border);
 }
@@ -310,9 +310,10 @@ body::after{
 .pager span{font-size:13px;color:var(--text-muted);font-family:var(--mono)}
 
 /* ===== modal (detail) ===== */
+body.modal-open{overflow:hidden}
 .modal-bg{
   position:fixed;inset:0;background:var(--modal-bg);backdrop-filter:blur(6px);
-  z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;
+  z-index:150;display:flex;align-items:center;justify-content:center;padding:24px;
   opacity:0;pointer-events:none;transition:opacity .2s;
 }
 .modal-bg.open{opacity:1;pointer-events:auto}
@@ -369,6 +370,59 @@ body::after{
 /* ===== confirm dialog ===== */
 .confirm-box{width:min(400px,90%)}
 .confirm-box p{font-size:14px;line-height:1.7;color:var(--text-dim);margin-bottom:22px}
+
+/* ===== attachments ===== */
+.attach-sec{margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+.attach-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.attach-head .a-title{font-size:14px;font-weight:600;color:var(--text-dim);display:flex;align-items:center;gap:8px}
+.attach-head .a-title svg{width:16px;height:16px}
+.attach-head .a-count{font-size:12px;color:var(--text-muted);font-family:var(--mono)}
+.attach-head .a-add{
+  margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:9px;
+  background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);
+  font-size:13px;font-weight:600;transition:all .15s;
+}
+.attach-head .a-add:hover{filter:brightness(1.1)}
+.attach-head .a-add svg{width:14px;height:14px}
+.att-list{display:flex;flex-direction:column;gap:8px}
+.att-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:11px;transition:all .15s;
+}
+.att-item:hover{border-color:var(--border-strong);background:var(--surface-2)}
+.att-ic{
+  width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);
+}
+.att-ic svg{width:18px;height:18px}
+.att-info{flex:1;min-width:0}
+.att-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-meta{font-size:12px;color:var(--text-muted);margin-top:2px;font-family:var(--mono)}
+.att-actions{display:flex;gap:4px;flex:none}
+.att-act{
+  width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  color:var(--text-dim);transition:all .12s;
+}
+.att-act:hover{background:var(--surface-2);color:var(--text)}
+.att-act.danger:hover{background:var(--danger-soft);color:var(--danger)}
+.att-act svg{width:15px;height:15px}
+.att-empty{
+  padding:20px;text-align:center;color:var(--text-muted);font-size:13px;
+  background:var(--surface);border:1px dashed var(--border-strong);border-radius:11px;
+}
+.att-uploading{display:flex;align-items:center;gap:10px;color:var(--text-dim);font-size:13px;padding:10px 14px}
+.att-uploading .spin{
+  width:15px;height:15px;border-radius:50%;flex:none;
+  border:2px solid var(--border-strong);border-top-color:var(--accent);
+  animation:att-spin .8s linear infinite;
+}
+@keyframes att-spin{to{transform:rotate(360deg)}}
+.att-drop{
+  border:1px dashed var(--border-strong);border-radius:11px;padding:22px;text-align:center;
+  color:var(--text-muted);font-size:13px;cursor:pointer;transition:all .15s;background:var(--surface);
+}
+.att-drop:hover{border-color:var(--accent);color:var(--text-dim);background:var(--accent-soft)}
+.att-drop.drag{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 
 /* ===== toast ===== */
 #toast{
@@ -526,6 +580,38 @@ body::after{
     });
   }
 
+  // ========== attachments api ==========
+  var ATT_BASE = "https://4m0yetmch4fdm.aiforce.cloud/app/app_17dwak33na0/api/attachments";
+  function attApi(method, path, formData){
+    var url = ATT_BASE + path + (path.indexOf("?")>=0?"&":"?") + "key=" + API_KEY;
+    var opt = { method:method, headers:{ "x-api-key":API_KEY } };
+    if(formData !== undefined){
+      opt.body = formData; // FormData 自动设置 multipart boundary，不手动设 Content-Type
+    }
+    return fetch(url, opt).then(function(res){
+      if(res.status === 401) throw new Error("密钥无效");
+      if(!res.ok) return res.json().then(function(e){
+        throw new Error((e&&e.error&&e.error.message) || ("请求失败 "+res.status));
+      });
+      var ct = res.headers.get("content-type")||"";
+      if(ct.indexOf("json")>=0) return res.json();
+      return res.text().then(function(t){ return t?{raw:t}:{}; });
+    });
+  }
+  function listAttachments(notebookId){
+    return attApi("GET","?notebookId="+encodeURIComponent(notebookId))
+      .then(function(d){ return d.items||[]; });
+  }
+  function uploadAttachment(notebookId, file){
+    var fd = new FormData();
+    fd.append("notebookId", notebookId);
+    fd.append("file", file);
+    return attApi("POST","/upload", fd);
+  }
+  function deleteAttachment(id){
+    return attApi("DELETE","/"+id);
+  }
+
   // ========== utils ==========
   function esc(s){
     return String(s==null?"":s)
@@ -553,6 +639,55 @@ body::after{
     t.className = "show " + (kind||"");
     clearTimeout(t._timer);
     t._timer = setTimeout(function(){ t.className = ""; }, 2400);
+  }
+
+  // ========== attachment utils ==========
+  function fixMojibake(s){
+    // 后端 multipart 可能把 UTF-8 文件名按 Latin-1 解码，尝试恢复
+    if(!s || /^[\x00-\x7F]*$/.test(s)) return s; // 纯 ASCII 无需处理
+    try{
+      var bytes = [];
+      for(var i=0;i<s.length;i++){
+        var code = s.charCodeAt(i);
+        if(code > 0xFF) return s; // 有非 Latin-1 字符，不是乱码
+        bytes.push(code);
+      }
+      var buf = new Uint8Array(bytes);
+      var fixed = new TextDecoder("utf-8", {fatal:true}).decode(buf);
+      // 恢复后应包含 CJK 或常见字符，且不含替换符
+      if(/[\u4e00-\u9fff]/.test(fixed)) return fixed;
+      return s;
+    }catch(e){ return s; }
+  }
+  function fmtSize(bytes){
+    if(bytes==null) return "—";
+    if(bytes<1024) return bytes+" B";
+    if(bytes<1048576) return (bytes/1024).toFixed(1)+" KB";
+    return (bytes/1048576).toFixed(2)+" MB";
+  }
+  function fileIcon(mime, name){
+    var ext = (name||"").split(".").pop().toLowerCase();
+    if(mime && mime.indexOf("image/")===0) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></svg>';
+    if(mime && mime.indexOf("video/")===0) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>';
+    if(mime && mime.indexOf("audio/")===0) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+    if(mime && (mime.indexOf("pdf")>=0) || ext==="pdf") return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></svg>';
+    if(["zip","rar","7z","tar","gz"].indexOf(ext)>=0) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>';
+    if(mime && (mime.indexOf("word")>=0 || mime.indexOf("document")>=0)) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+    if(mime && (mime.indexOf("sheet")>=0 || mime.indexOf("excel")>=0 || mime.indexOf("csv")>=0)) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h.01"/></svg>';
+    if(mime && (mime.indexOf("presentation")>=0 || mime.indexOf("powerpoint")>=0)) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13l2 3 3-4 3 5"/></svg>';
+    if(mime && mime.indexOf("text/")===0) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+  }
+  function attFileUrl(id){
+    return "https://4m0yetmch4fdm.aiforce.cloud/app/app_17dwak33na0/api/attachments/"+id+"/file?key="+API_KEY;
+  }
+  function openAttachment(a){
+    // downloadUrl 为相对路径（如 /api/attachments/{id}/file?key=piwriq）时拼接完整域名
+    var u = a.downloadUrl;
+    if(u && u.indexOf("http")!==0){
+      u = "https://4m0yetmch4fdm.aiforce.cloud/app/app_17dwak33na0" + u;
+    }
+    window.open(u, "_blank");
   }
 
   // ========== load list ==========
@@ -681,7 +816,12 @@ body::after{
           '<h2>'+esc(n.title||"（无标题）")+'</h2>' +
           '<div class="m-time">更新于 '+fullTime(n.updatedAt)+'</div>' +
         '</div>' +
-        '<div class="modal-body"><div class="m-content">'+esc(normLines(n.content||""))+'</div></div>' +
+        '<div class="modal-body">' +
+          '<div class="m-content">'+esc(normLines(n.content||""))+'</div>' +
+          '<div class="attach-sec" id="attachSec">' +
+            '<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:13px">附件加载中…</div>' +
+          '</div>' +
+        '</div>' +
         '<div class="modal-foot">' +
           '<button class="btn btn-ghost" id="mClose">关闭</button>' +
           '<button class="btn btn-danger" id="mDel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>删除</button>' +
@@ -691,9 +831,115 @@ body::after{
       $("mCloseX").onclick = function(){ closeDetail(); };
       $("mDel").onclick = function(){ closeDetail(); confirmDelete(n.id); };
       $("mEdit").onclick = function(){ closeDetail(); openEdit(n.id); };
+      renderAttachments(n.id);
     }).catch(function(e){
       box.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><p>'+esc(e.message)+'</p></div>';
     });
+  }
+
+  // ========== attachments render ==========
+  function renderAttachments(notebookId, sec){
+    sec = sec || $("attachSec");
+    if(!sec) return;
+    sec.innerHTML = '';
+    listAttachments(notebookId).then(function(list){
+      var head =
+        '<div class="attach-head">' +
+          '<span class="a-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>附件</span>' +
+          '<span class="a-count">'+(list.length?list.length+" 个":"")+'</span>' +
+          '<button class="a-add" id="attAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>上传</button>' +
+        '</div>';
+      var body;
+      if(!list.length){
+        body = '<div class="att-empty">暂无附件，点击「上传」添加文件</div>';
+      } else {
+        body = '<div class="att-list">' + list.map(function(a){
+          var fname = fixMojibake(a.fileName);
+          return '<div class="att-item" data-id="'+esc(a.id)+'">' +
+            '<div class="att-ic">'+fileIcon(a.mimeType, fname)+'</div>' +
+            '<div class="att-info">' +
+              '<div class="att-name" title="'+esc(fname)+'">'+esc(fname)+'</div>' +
+              '<div class="att-meta">'+fmtSize(a.fileSize)+' · '+fmtTime(a.createdAt)+'</div>' +
+            '</div>' +
+            '<div class="att-actions">' +
+              '<button class="att-act view" title="预览/下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>' +
+              '<button class="att-act danger del" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>' +
+            '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+      }
+      sec.innerHTML = head + body;
+      var addBtn = sec.querySelector("#attAdd");
+      if(addBtn) addBtn.onclick = function(){ openUploader(notebookId, sec); };
+      sec.querySelectorAll(".att-item").forEach(function(item){
+        var a = list.filter(function(x){ return x.id===item.dataset.id; })[0];
+        item.querySelector(".view").onclick = function(e){ e.stopPropagation(); openAttachment(a); };
+        item.querySelector(".del").onclick = function(e){
+          e.stopPropagation();
+          confirmDelAttachment(notebookId, a, item, sec);
+        };
+      });
+    }).catch(function(e){
+      sec.innerHTML = '<div class="attach-head"><span class="a-title">附件</span></div>' +
+        '<div class="att-empty">附件加载失败：'+esc(e.message)+'</div>';
+    });
+  }
+
+  // ========== attachment upload ==========
+  function openUploader(notebookId, sec){
+    sec = sec || $("attachSec");
+    sec.innerHTML =
+      '<div class="attach-head">' +
+        '<span class="a-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>附件</span>' +
+        '<span class="a-count">上传文件</span>' +
+        '<button class="a-add" id="attCancel" style="margin-left:auto;background:var(--surface);border-color:var(--border);color:var(--text-dim)">取消</button>' +
+      '</div>' +
+      '<div class="att-drop" id="attDrop">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>' +
+        '<div>点击选择文件或拖拽到此处</div>' +
+        '<div style="font-size:12px;margin-top:4px">单个文件不超过 50MB</div>' +
+        '<input type="file" id="attFile" style="display:none">' +
+      '</div>';
+    var drop = sec.querySelector("#attDrop"), fileInput = sec.querySelector("#attFile");
+    drop.onclick = function(){ fileInput.click(); };
+    drop.addEventListener("dragover", function(e){ e.preventDefault(); drop.classList.add("drag"); });
+    drop.addEventListener("dragleave", function(){ drop.classList.remove("drag"); });
+    drop.addEventListener("drop", function(e){
+      e.preventDefault(); drop.classList.remove("drag");
+      if(e.dataTransfer.files.length) doUpload(notebookId, e.dataTransfer.files[0], sec);
+    });
+    fileInput.onchange = function(){ if(fileInput.files.length) doUpload(notebookId, fileInput.files[0], sec); };
+    var cancelBtn = sec.querySelector("#attCancel");
+    if(cancelBtn) cancelBtn.onclick = function(){ renderAttachments(notebookId, sec); };
+  }
+
+  function doUpload(notebookId, file, sec){
+    if(file.size > 50*1024*1024){ toast("文件超过 50MB 限制","err"); return; }
+    sec = sec || $("attachSec");
+    sec.innerHTML =
+      '<div class="attach-head"><span class="a-title">附件</span></div>' +
+      '<div class="att-uploading"><span class="spin"></span>正在上传 '+esc(file.name)+'…</div>';
+    uploadAttachment(notebookId, file).then(function(a){
+      toast("上传成功","ok");
+      renderAttachments(notebookId, sec);
+    }).catch(function(e){
+      toast("上传失败："+e.message,"err");
+      renderAttachments(notebookId, sec);
+    });
+  }
+
+  // ========== attachment delete ==========
+  function confirmDelAttachment(notebookId, att, item, sec){
+    sec = sec || $("attachSec");
+    $("confirmText").innerHTML = "确定要删除附件「"+esc(fixMojibake(att.fileName))+"」吗？";
+    $("confirmModal").classList.add("open");
+    $("confirmOk").onclick = function(){
+      $("confirmModal").classList.remove("open");
+      deleteAttachment(att.id).then(function(){
+        toast("已删除附件","ok");
+        renderAttachments(notebookId, sec);
+      }).catch(function(e){ toast(e.message,"err"); });
+    };
   }
   function closeDetail(){ $("detailModal").classList.remove("open"); }
   $("detailModal").addEventListener("click", function(e){ if(e.target===$("detailModal")) closeDetail(); });
@@ -709,7 +955,7 @@ body::after{
   function showEditForm(n){
     var box = document.querySelector("#editModal .modal-box");
     box.innerHTML =
-      '<div style="padding:24px 28px">' +
+      '<div style="padding:24px 28px;overflow-y:auto;max-height:calc(85vh - 4px);box-sizing:border-box">' +
         '<div class="form-group">' +
           '<label>标题</label>' +
           '<input type="text" id="fTitle" placeholder="输入笔记标题…" value="'+esc(n.title)+'">' +
@@ -723,6 +969,9 @@ body::after{
           '<input type="text" id="fCat" placeholder="输入分类…" value="'+esc(n.category||"general")+'">' +
           '<div class="form-hint">手动填写分类</div>' +
         '</div>' +
+        '<div class="attach-sec" id="editAttachSec">' +
+          '<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:13px">附件加载中…</div>' +
+        '</div>' +
         '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">' +
           '<button class="btn btn-ghost" id="fCancel">取消</button>' +
           '<button class="btn btn-primary" id="fSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>保存</button>' +
@@ -732,6 +981,59 @@ body::after{
     $("fCancel").onclick = function(){ $("editModal").classList.remove("open"); };
     $("fSave").onclick = function(){ saveNote(n.id); };
     $("editModal").addEventListener("click", function(e){ if(e.target===$("editModal")) $("editModal").classList.remove("open"); });
+    // 编辑已有笔记：加载附件；新建笔记：可选择附件随笔记一起上传
+    var attSec = $("editAttachSec");
+    if(n.id){
+      renderAttachments(n.id, attSec);
+    } else {
+      window.__pendingFiles = [];
+      attSec.innerHTML =
+        '<div class="attach-head">' +
+          '<span class="a-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>附件</span>' +
+          '<button class="a-add" id="attPick" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>选择附件</button>' +
+          '<input type="file" id="attPickInput" multiple style="display:none">' +
+        '</div>' +
+        '<div class="att-pending" id="attPending">' +
+          '<div class="att-empty">保存时将自动上传所选附件（单个不超过 50MB）</div>' +
+        '</div>';
+      var pickBtn = $("attPick"), pickInput = $("attPickInput"), pendingBox = $("attPending");
+      pickBtn.onclick = function(){ pickInput.click(); };
+      pickInput.onchange = function(){
+        var files = Array.prototype.slice.call(pickInput.files||[]);
+        var oversize = files.filter(function(f){ return f.size > 50*1024*1024; });
+        if(oversize.length){ toast("「"+oversize[0].name+"」超过 50MB 限制","err"); }
+        files = files.filter(function(f){ return f.size <= 50*1024*1024; });
+        files.forEach(function(f){ window.__pendingFiles.push(f); });
+        renderPending();
+        pickInput.value = "";
+      };
+      function renderPending(){
+        var list = window.__pendingFiles;
+        if(!list.length){
+          pendingBox.innerHTML = '<div class="att-empty">保存笔记时可上传所选附件（单个不超过 50MB）</div>';
+          return;
+        }
+        pendingBox.innerHTML = '<div class="att-list">' + list.map(function(f, i){
+          return '<div class="att-item" data-i="'+i+'">' +
+            '<div class="att-ic">'+fileIcon(f.type||"", f.name)+'</div>' +
+            '<div class="att-info">' +
+              '<div class="att-name" title="'+esc(f.name)+'">'+esc(f.name)+'</div>' +
+              '<div class="att-meta">'+fmtSize(f.size)+' · 待上传</div>' +
+            '</div>' +
+            '<div class="att-actions">' +
+              '<button class="att-act danger del" title="移除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' +
+            '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+        pendingBox.querySelectorAll(".att-item").forEach(function(item){
+          item.querySelector(".del").onclick = function(){
+            window.__pendingFiles.splice(parseInt(item.dataset.i,10), 1);
+            renderPending();
+          };
+        });
+      }
+      renderPending();
+    }
   }
 
   function saveNote(id){
@@ -747,11 +1049,22 @@ body::after{
         loadList();
       }).catch(function(e){ toast(e.message,"err"); });
     } else {
-      api("POST","", body).then(function(){
-        $("editModal").classList.remove("open");
-        toast("已创建","ok");
-        S.page = 1;
-        loadList();
+      // 新建笔记：先创建笔记，再逐个上传所选附件
+      api("POST","", body).then(function(d){
+        var nid = (d && d.id) || (d && d._id) || (d && d.notebook && d.notebook.id);
+        if(!nid){ throw new Error("创建成功但未返回笔记 id"); }
+        var files = window.__pendingFiles || [];
+        var chain = Promise.resolve();
+        files.forEach(function(f){
+          chain = chain.then(function(){ return uploadAttachment(nid, f); });
+        });
+        return chain.then(function(){
+          window.__pendingFiles = [];
+          $("editModal").classList.remove("open");
+          toast("已创建"+(files.length?"（含 "+files.length+" 个附件）":""),"ok");
+          S.page = 1;
+          loadList();
+        });
       }).catch(function(e){ toast(e.message,"err"); });
     }
   }
@@ -815,6 +1128,15 @@ body::after{
   })();
 
   // ========== init ==========
+  // 弹窗打开时锁定主页面滚动，关闭时恢复
+  var modalEls = ["detailModal","editModal","confirmModal"].map(function(id){ return $(id); });
+  function syncBodyLock(){
+    var anyOpen = modalEls.some(function(el){ return el.classList.contains("open"); });
+    document.body.classList.toggle("modal-open", anyOpen);
+  }
+  modalEls.forEach(function(m){
+    new MutationObserver(syncBodyLock).observe(m, { attributes:true, attributeFilter:["class"] });
+  });
   loadList();
 })();
 </script>
