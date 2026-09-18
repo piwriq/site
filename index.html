@@ -24,18 +24,105 @@
             }
         }
     </script>
+    <!-- 主题变量定义：浅色 / 暗色 / 护眼绿 -->
+    <style>
+        :root {
+            --bg-from: #eff6ff;
+            --bg-to: #eef2ff;
+            --card-bg: #ffffff;
+            --card-border: #f3f4f6;
+            --card-hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --text-primary: #1f2937;
+            --text-secondary: #374151;
+            --text-muted: #6b7280;
+            --text-faint: #9ca3af;
+            --sidebar-bg: #ffffff;
+            --input-bg: #ffffff;
+            --input-border: #d1d5db;
+            --input-text: #1f2937;
+            --result-bg: #f9fafb;
+            --result-hover: #f3f4f6;
+            --icon-text: #2563eb;
+            --icon-text-muted: #4b5563;
+            --icon-bg-blue: #dbeafe;
+            --icon-bg-pink: #fce7f3;
+            --icon-bg-gray: #f3f4f6;
+            --icon-bg-orange: #ffedd5;
+            --icon-bg-red: #fee2e2;
+            --brand: #4F46E5;
+            --brand-glow: rgba(79, 70, 229, 0.3);
+            --highlight: #4F46E5;
+        }
+        html[data-theme="dark"] {
+            --bg-from: #0f172a;
+            --bg-to: #1e1b4b;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --card-hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --text-faint: #64748b;
+            --sidebar-bg: #111827;
+            --input-bg: #1f2937;
+            --input-border: #374151;
+            --input-text: #f3f4f6;
+            --result-bg: #1f2937;
+            --result-hover: #334155;
+            --icon-text: #93c5fd;
+            --icon-text-muted: #9ca3af;
+            --icon-bg-blue: #1e3a5f;
+            --icon-bg-pink: #4c1d2e;
+            --icon-bg-gray: #374151;
+            --icon-bg-orange: #5f3a1e;
+            --icon-bg-red: #5f1e1e;
+            --brand: #818cf8;
+            --brand-glow: rgba(129, 140, 248, 0.3);
+            --highlight: #818cf8;
+        }
+        html[data-theme="green"] {
+            --bg-from: #d9f6d6;
+            --bg-to: #c7e8c9;
+            --card-bg: #f0f9ef;
+            --card-border: #d8e3cb;
+            --card-hover-shadow: 0 20px 25px -5px rgba(45, 85, 60, 0.15), 0 10px 10px -5px rgba(45, 85, 60, 0.08);
+            --text-primary: #2c3e2f;
+            --text-secondary: #3d4d41;
+            --text-muted: #5d705f;
+            --text-faint: #7d907f;
+            --sidebar-bg: #eef9ed;
+            --input-bg: #f6fbf5;
+            --input-border: #c4ddc0;
+            --input-text: #2c3e2f;
+            --result-bg: #e6f2e3;
+            --result-hover: #daebd6;
+            --icon-text: #2e7d4f;
+            --icon-text-muted: #55735c;
+            --icon-bg-blue: #d7ecdc;
+            --icon-bg-pink: #eedfe0;
+            --icon-bg-gray: #e2eee3;
+            --icon-bg-orange: #f2e6c8;
+            --icon-bg-red: #f0dedb;
+            --brand: #2e7d4f;
+            --brand-glow: rgba(46, 125, 79, 0.3);
+            --highlight: #2e7d4f;
+        }
+    </style>
     <style type="text/tailwindcss">
         @layer utilities {
             .glass-effect {
                 backdrop-filter: blur(10px);
                 background: rgba(255, 255, 255, 0.8);
             }
+            .bg-theme {
+                background-image: linear-gradient(135deg, var(--bg-from), var(--bg-to));
+            }
             .card-hover {
                 transition: all 0.3s ease;
             }
             .card-hover:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                box-shadow: var(--card-hover-shadow);
             }
             .search-sidebar {
                 position: fixed;
@@ -43,7 +130,7 @@
                 right: -350px;
                 width: 350px;
                 height: 100vh;
-                background: white;
+                background: var(--sidebar-bg);
                 box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
                 transition: right 0.3s ease;
                 z-index: 1000;
@@ -73,20 +160,20 @@
                 right: 20px;
                 width: 60px;
                 height: 60px;
-                background: #4F46E5;
+                background: var(--brand);
                 color: white;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+                box-shadow: 0 4px 10px var(--brand-glow);
                 cursor: pointer;
                 transition: all 0.3s ease;
                 z-index: 1001;
             }
             .search-icon-btn:hover {
                 transform: scale(1.1);
-                box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
+                box-shadow: 0 6px 15px var(--brand-glow);
             }
             .function-card {
                 transition: all 0.3s ease;
@@ -104,32 +191,37 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-inter">
+<body class="bg-theme min-h-screen font-inter">
+    <!-- 主题切换按钮 -->
+    <div id="themeToggle" class="fixed top-5 left-5 z-[1001] w-12 h-12 rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-all duration-300 hover:scale-110" style="background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--card-border);" title="切换主题">
+        <i id="themeIcon" class="fa fa-sun text-xl"></i>
+    </div>
+
     <!-- 搜索侧边栏 -->
     <div class="search-sidebar" id="searchSidebar">
         <div class="p-6">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-800">功能搜索</h3>
-                <button id="closeSearch" class="text-gray-500 hover:text-gray-700">
+                <h3 class="text-xl font-bold text-[var(--text-primary)]">功能搜索</h3>
+                <button id="closeSearch" class="text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
                     <i class="fa fa-times text-xl"></i>
                 </button>
             </div>
             
             <div class="relative mb-6">
                 <input type="text" id="functionSearch" 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors duration-300"
+                       class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors duration-300 bg-[var(--input-bg)] text-[var(--input-text)] border-[var(--input-border)]"
                        placeholder="输入功能关键词搜索...">
-                <button type="button" id="clearSearchInput" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                <button type="button" id="clearSearchInput" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-muted)] hidden">
                     <i class="fa fa-times-circle text-xl"></i>
                 </button>
             </div>
             
-            <div class="text-xs text-gray-500 mb-6">
+            <div class="text-xs text-[var(--text-muted)] mb-6">
                 <span class="text-primary font-medium">提示：</span> 输入功能关键词（如"通话"、"消消乐"、"查询"等）快速定位功能卡片
             </div>
             
-            <div class="border-t pt-4">
-                <h4 class="font-semibold text-gray-700 mb-3">搜索结果</h4>
+            <div class="border-t pt-4" style="border-color: var(--card-border);">
+                <h4 class="font-semibold text-[var(--text-secondary)] mb-3">搜索结果</h4>
                 <div id="searchResults" class="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto">
                     <!-- 搜索结果将在这里动态显示 -->
                 </div>
@@ -150,11 +242,11 @@
         
         <!-- 头部 -->
         <header class="text-center mb-12">
-            <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-gray-800 mb-4">
+            <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-[var(--text-primary)] mb-4">
                 <i class="fa fa-compass text-primary mr-3"></i>
                 网站导航
             </h1>
-            <p class="text-gray-600 text-lg">简洁高效的网站访问入口</p>
+            <p class="text-[var(--text-muted)] text-lg">简洁高效的网站访问入口</p>
         </header>
 
         <!-- 网站链接网格 -->
@@ -162,100 +254,100 @@
             
             <!-- 示例网站卡片 1 -->
             <a href="https://piwriq.github.io/site/generalCall2.html" target="_blank" class="card-hover function-card" data-title="通话截图生成器" data-keywords="通话,截图,生成器">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-mobile text-blue-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-blue)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-mobile text-[var(--icon-text)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">通话截图生成器</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">通话截图生成器</h3>
                 </div>
             </a>
 
             <!-- 示例网站卡片 2 -->
             <a href="https://piwriq.github.io/site/%E5%B0%8F%E7%8C%AB%E6%B6%88%E6%B6%88%E4%B9%90.html" target="_blank" class="card-hover function-card" data-title="小猫消消乐" data-keywords="小猫,消消乐,游戏">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-cat text-blue-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-pink)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-cat text-[var(--icon-text)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">小猫消消乐</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">小猫消消乐</h3>
                 </div>
             </a>
 
             <!-- 示例网站卡片 3 -->
             <a href="https://piwriq.github.io/site/phoneInfoQuery.html" target="_blank" class="card-hover function-card" data-title="归属地批量查询" data-keywords="归属地,批量,查询,手机号">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-search text-gray-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-gray)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-search text-[var(--icon-text-muted)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">归属地批量查询</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">归属地批量查询</h3>
                 </div>
             </a>
 
             <!-- 示例网站卡片 4 -->
             <a href="https://piwriq.github.io/site/excelSearch.html" target="_blank" class="card-hover function-card" data-title="给定excel信息查询" data-keywords="excel,信息,查询,数据">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-search text-gray-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-gray)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-search text-[var(--icon-text-muted)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">给定excel信息查询</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">给定excel信息查询</h3>
                 </div>
             </a>
 
             <!-- 示例网站卡片 5 -->
             <a href="https://4m0yetmch4fdm.aiforce.cloud/app/app_17dwja0es6v" target="_blank" class="card-hover function-card" data-title="共享剪切板" data-keywords="剪切板,共享,豆包">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-code text-blue-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-orange)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-code text-[var(--icon-text)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">共享剪切板</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">共享剪切板</h3>
                 </div>
             </a>
 
             <!-- 示例网站卡片 6 -->
             <a href="https://4m0yetmch4fdm.aiforce.cloud/app/app_17dvfpdtbdf" target="_blank" class="card-hover function-card" data-title="豆包服务器面板" data-keywords="豆包,服务器,面板">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                         <i class="fa fa-code text-blue-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-red)] rounded-full flex items-center justify-center mx-auto mb-4">
+                         <i class="fa fa-code text-[var(--icon-text)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">豆包服务器面板</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">豆包服务器面板</h3>
                 </div>
             </a>
 
             <!-- 示例网站卡片 7 -->
             <a href="https://4m0yetmch4fdm.aiforce.cloud/app/app_17dwak33na0" target="_blank" class="card-hover function-card" data-title="记事本API管理平台" data-keywords="豆包,api管理">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-code text-blue-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-blue)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-code text-[var(--icon-text)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">记事本API管理平台</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">记事本API管理平台</h3>
                 </div>
             </a>
 
-            <!-- 示例网站卡片 7 -->
+            <!-- 示例网站卡片 8 -->
             <a href="https://dcniaqwtmoca.aiforce.cloud/app/app_17dwnhp4qt7" target="_blank" class="card-hover function-card" data-title="飞书服务器面板" data-keywords="飞书,服务器,面板">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-code text-blue-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-blue)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-code text-[var(--icon-text)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">飞书服务器面板</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">飞书服务器面板</h3>
                 </div>
             </a>
 
-            <!-- 示例网站卡片 7 -->
+            <!-- 示例网站卡片 9 -->
             <a href="https://piwriq.github.io/site/记事本.html" target="_blank" class="card-hover function-card" data-title="记事本" data-keywords="豆包,记事本">
-                <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa fa-code text-blue-600 text-2xl"></i>
+                <div class="bg-[var(--card-bg)] rounded-xl shadow-lg p-6 text-center border border-[var(--card-border)]">
+                    <div class="w-16 h-16 bg-[var(--icon-bg-blue)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-code text-[var(--icon-text)] text-2xl"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2">记事本</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-2">记事本</h3>
                 </div>
             </a>
 
         </div>
 
         <!-- 底部说明 -->
-        <footer class="mt-16 text-center text-gray-500 text-sm">
+        <footer class="mt-16 text-center text-[var(--text-muted)] text-sm">
             <p>© 2025 网站导航 | 简洁高效</p>
-            <p class="mt-2 text-xs text-gray-400">需要添加更多网站？请编辑HTML代码中的网站卡片部分</p>
+            <p class="mt-2 text-xs text-[var(--text-faint)]">需要添加更多网站？请编辑HTML代码中的网站卡片部分</p>
         </footer>
 
     </div>
@@ -272,6 +364,31 @@
         const functionCards = document.querySelectorAll('.function-card');
         const searchResults = document.getElementById('searchResults');
         const functionCardsContainer = document.getElementById('functionCardsContainer');
+
+        // 主题切换
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themes = ['light', 'dark', 'green'];
+        const themeIcons = { light: 'fa-sun', dark: 'fa-moon', green: 'fa-leaf' };
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('nav-theme', theme);
+            themeIcon.className = 'fa ' + themeIcons[theme] + ' text-xl';
+        }
+
+        function themeVar(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#4F46E5';
+        }
+
+        themeToggle.addEventListener('click', function() {
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            const next = themes[(themes.indexOf(current) + 1) % themes.length];
+            applyTheme(next);
+        });
+
+        // 初始化主题（本地持久化）
+        applyTheme(localStorage.getItem('nav-theme') || 'light');
 
         // 初始化事件监听器
         document.addEventListener('DOMContentLoaded', function() {
@@ -347,12 +464,12 @@
             searchResults.innerHTML = '';
             
             if (searchTerm === '') {
-                searchResults.innerHTML = '<p class="text-gray-500 text-center">请输入关键词搜索功能</p>';
+                searchResults.innerHTML = '<p class="text-[var(--text-muted)] text-center">请输入关键词搜索功能</p>';
                 return;
             }
 
             if (matchedCards.length === 0) {
-                searchResults.innerHTML = '<p class="text-gray-500 text-center">未找到匹配的功能</p>';
+                searchResults.innerHTML = '<p class="text-[var(--text-muted)] text-center">未找到匹配的功能</p>';
                 return;
             }
 
@@ -361,7 +478,7 @@
                 const resultItem = document.createElement('a');
                 resultItem.href = card.href;
                 resultItem.target = '_blank';
-                resultItem.className = 'block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200';
+                resultItem.className = 'block p-3 bg-[var(--result-bg)] rounded-lg hover:bg-[var(--result-hover)] transition-colors duration-200';
                 
                 const cardTitle = card.dataset.title;
                 const cardIcon = card.querySelector('i').cloneNode(true);
@@ -372,7 +489,7 @@
                             ${cardIcon.outerHTML}
                         </div>
                         <div>
-                            <h4 class="font-medium text-gray-800">${cardTitle}</h4>
+                            <h4 class="font-medium text-[var(--text-primary)]">${cardTitle}</h4>
                         </div>
                     </div>
                 `;
@@ -383,14 +500,16 @@
 
         // 高亮显示匹配的卡片
         function highlightMatchedCards(matchedCards) {
+            const highlightColor = themeVar('--highlight');
+            const normalColor = themeVar('--card-border') || '#e5e7eb';
             functionCards.forEach(card => {
                 if (matchedCards.includes(card)) {
                     card.classList.remove('hidden');
-                    card.style.border = '2px solid #4F46E5';
+                    card.style.border = '2px solid ' + highlightColor;
                     card.style.transform = 'scale(1.02)';
                 } else {
                     card.classList.add('hidden');
-                    card.style.border = '1px solid #e5e7eb';
+                    card.style.border = '1px solid ' + normalColor;
                     card.style.transform = 'scale(1)';
                 }
             });
@@ -404,12 +523,12 @@
             // 显示所有功能卡片
             functionCards.forEach(card => {
                 card.classList.remove('hidden');
-                card.style.border = '1px solid #e5e7eb';
+                card.style.border = '1px solid ' + (themeVar('--card-border') || '#e5e7eb');
                 card.style.transform = 'scale(1)';
             });
             
             // 清空搜索结果
-            searchResults.innerHTML = '<p class="text-gray-500 text-center">请输入关键词搜索功能</p>';
+            searchResults.innerHTML = '<p class="text-[var(--text-muted)] text-center">请输入关键词搜索功能</p>';
         }
     </script>
 </body>
