@@ -338,6 +338,11 @@ body.modal-open{overflow:hidden}
 .modal-body{padding:20px 28px;overflow-y:auto;flex:1}
 .modal-body .m-content{font-size:15px;line-height:1.8;color:var(--text-dim);white-space:pre-wrap;word-break:break-word}
 .modal-body .m-content:empty::before{content:'（无内容）';color:var(--text-muted);font-style:italic}
+.m-content a{
+  color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 45%,transparent);
+  cursor:pointer;word-break:break-all;transition:opacity .15s;
+}
+.m-content a:hover{opacity:.85;border-bottom-color:var(--accent)}
 .modal-foot{
   padding:18px 28px;border-top:1px solid var(--border);
   display:flex;gap:10px;justify-content:flex-end;
@@ -423,6 +428,20 @@ body.modal-open{overflow:hidden}
 }
 .att-drop:hover{border-color:var(--accent);color:var(--text-dim);background:var(--accent-soft)}
 .att-drop.drag{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+/* 图片附件缩略图 */
+.att-images{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:12px;
+}
+.att-thumb{
+  position:relative;border:1px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;
+  background:var(--surface);transition:all .15s;
+}
+.att-thumb:hover{border-color:var(--accent);box-shadow:0 2px 12px var(--accent-glow)}
+.att-thumb img{display:block;width:100%;height:120px;object-fit:cover}
+.att-thumb .att-thumb-name{
+  position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:11px;color:#fff;
+  background:linear-gradient(transparent,rgba(0,0,0,.55));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 
 /* ===== toast ===== */
 #toast{
@@ -619,6 +638,14 @@ body.modal-open{overflow:hidden}
       .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   }
   function normLines(s){ return String(s==null?"":s).replace(/\\n/g,"\n"); }
+  // 将纯文本中的 URL 转为可点击链接（先转义再替换，安全）
+  function linkify(s){
+    var t = esc(s);
+    var re = /(https?:\/\/[^\s<>&"']+)/g;
+    return t.replace(re, function(m){
+      return '<a href="'+m+'" target="_blank" rel="noopener noreferrer">'+m+'</a>';
+    });
+  }
   function fmtTime(iso){
     if(!iso) return "";
     var d = new Date(iso), diff = Date.now()-d.getTime();
@@ -681,13 +708,20 @@ body.modal-open{overflow:hidden}
   function attFileUrl(id){
     return "https://4m0yetmch4fdm.aiforce.cloud/app/app_17dwak33na0/api/attachments/"+id+"/file?key="+API_KEY;
   }
-  function openAttachment(a){
-    // downloadUrl 为相对路径（如 /api/attachments/{id}/file?key=piwriq）时拼接完整域名
-    var u = a.downloadUrl;
+  function fullAttUrl(a){
+    var u = a.downloadUrl || attFileUrl(a.id);
     if(u && u.indexOf("http")!==0){
       u = "https://4m0yetmch4fdm.aiforce.cloud/app/app_17dwak33na0" + u;
     }
-    window.open(u, "_blank");
+    return u;
+  }
+  function isImageAtt(a){
+    var ext = (fixMojibake(a.fileName)||"").split(".").pop().toLowerCase();
+    return (a.mimeType && a.mimeType.indexOf("image/")===0) ||
+           (!a.mimeType && ["png","jpg","jpeg","gif","webp","bmp","svg"].indexOf(ext)>=0);
+  }
+  function openAttachment(a){
+    window.open(fullAttUrl(a), "_blank");
   }
 
   // ========== load list ==========
@@ -817,7 +851,7 @@ body.modal-open{overflow:hidden}
           '<div class="m-time">更新于 '+fullTime(n.updatedAt)+'</div>' +
         '</div>' +
         '<div class="modal-body">' +
-          '<div class="m-content">'+esc(normLines(n.content||""))+'</div>' +
+          '<div class="m-content">'+linkify(normLines(n.content||""))+'</div>' +
           '<div class="attach-sec" id="attachSec">' +
             '<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:13px">附件加载中…</div>' +
           '</div>' +
@@ -849,11 +883,24 @@ body.modal-open{overflow:hidden}
           '<span class="a-count">'+(list.length?list.length+" 个":"")+'</span>' +
           '<button class="a-add" id="attAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>上传</button>' +
         '</div>';
-      var body;
-      if(!list.length){
-        body = '<div class="att-empty">暂无附件，点击「上传」添加文件</div>';
+      var imgs = list.filter(isImageAtt);
+      var others = list.filter(function(a){ return !isImageAtt(a); });
+      var body = "";
+      // 图片附件：缩略图网格，点击打开原图
+      if(imgs.length){
+        body += '<div class="att-images">' + imgs.map(function(a){
+          var fname = fixMojibake(a.fileName);
+          return '<div class="att-thumb" data-id="'+esc(a.id)+'" title="点击查看原图">' +
+            '<img src="'+esc(fullAttUrl(a))+'" alt="'+esc(fname)+'" loading="lazy">' +
+            '<div class="att-thumb-name">'+esc(fname)+'</div>' +
+          '</div>';
+        }).join('') + '</div>';
+      }
+      // 非图片附件：行列表
+      if(!others.length){
+        if(!imgs.length) body += '<div class="att-empty">暂无附件，点击「上传」添加文件</div>';
       } else {
-        body = '<div class="att-list">' + list.map(function(a){
+        body += '<div class="att-list">' + others.map(function(a){
           var fname = fixMojibake(a.fileName);
           return '<div class="att-item" data-id="'+esc(a.id)+'">' +
             '<div class="att-ic">'+fileIcon(a.mimeType, fname)+'</div>' +
@@ -871,6 +918,11 @@ body.modal-open{overflow:hidden}
       sec.innerHTML = head + body;
       var addBtn = sec.querySelector("#attAdd");
       if(addBtn) addBtn.onclick = function(){ openUploader(notebookId, sec); };
+      // 缩略图点击：打开原图
+      sec.querySelectorAll(".att-thumb").forEach(function(el){
+        var a = list.filter(function(x){ return x.id===el.dataset.id; })[0];
+        el.onclick = function(e){ e.stopPropagation(); openAttachment(a); };
+      });
       sec.querySelectorAll(".att-item").forEach(function(item){
         var a = list.filter(function(x){ return x.id===item.dataset.id; })[0];
         item.querySelector(".view").onclick = function(e){ e.stopPropagation(); openAttachment(a); };
