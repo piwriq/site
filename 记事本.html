@@ -442,6 +442,13 @@ body.modal-open{overflow:hidden}
   position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:11px;color:#fff;
   background:linear-gradient(transparent,rgba(0,0,0,.55));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+.att-thumb .att-thumb-del{
+  position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:8px;
+  display:grid;place-items:center;background:rgba(0,0,0,.45);color:#fff;cursor:pointer;
+  transition:all .12s;border:none;z-index:2;
+}
+.att-thumb .att-thumb-del:hover{background:var(--danger);color:#fff}
+.att-thumb .att-thumb-del svg{width:13px;height:13px}
 
 /* ===== toast ===== */
 #toast{
@@ -893,6 +900,7 @@ body.modal-open{overflow:hidden}
           return '<div class="att-thumb" data-id="'+esc(a.id)+'" title="点击查看原图">' +
             '<img src="'+esc(fullAttUrl(a))+'" alt="'+esc(fname)+'" loading="lazy">' +
             '<div class="att-thumb-name">'+esc(fname)+'</div>' +
+            '<button class="att-thumb-del" title="删除附件"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' +
           '</div>';
         }).join('') + '</div>';
       }
@@ -918,10 +926,14 @@ body.modal-open{overflow:hidden}
       sec.innerHTML = head + body;
       var addBtn = sec.querySelector("#attAdd");
       if(addBtn) addBtn.onclick = function(){ openUploader(notebookId, sec); };
-      // 缩略图点击：打开原图
+      // 缩略图点击：打开原图；删除按钮：删除附件
       sec.querySelectorAll(".att-thumb").forEach(function(el){
         var a = list.filter(function(x){ return x.id===el.dataset.id; })[0];
-        el.onclick = function(e){ e.stopPropagation(); openAttachment(a); };
+        el.addEventListener("click", function(e){ e.stopPropagation(); openAttachment(a); });
+        el.querySelector(".att-thumb-del").addEventListener("click", function(e){
+          e.stopPropagation();
+          confirmDelAttachment(notebookId, a, el, sec);
+        });
       });
       sec.querySelectorAll(".att-item").forEach(function(item){
         var a = list.filter(function(x){ return x.id===item.dataset.id; })[0];
